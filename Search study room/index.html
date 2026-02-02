@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Study Room Booking</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <header>
+        <h1>🎓 Campus Booking System</h1>
+        <nav>
+            <a href="#">Home</a>
+            <a href="#">My Bookings</a>
+            <a href="#">Profile</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="search-section">
+            <h2>🔍 Find a Study Room</h2>
+            <div class="search-form">
+                <div class="form-group">
+                    <label for="facility-type">Facility Type</label>
+                    <select id="facility-type">
+                        <option value="all">All Facilities</option>
+                        <option value="Activity Room">Activity Room</option>
+                        <option value="Classroom">Classroom</option>
+                        <option value="Computer Lab">Computer Lab</option>
+                        <option value="Consultation Room">Consultation Room</option>
+                        <option value="Financial Lab">Financial Lab</option>
+                        <option value="Lecture Theatre">Lecture Theatre</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="date">Date</label>
+                    <input type="date" id="date">
+                </div>
+
+                <div class="form-group">
+                    <label for="time">Time</label>
+                    <input type="time" id="time">
+                </div>
+
+                <div class="form-group">
+                    <label for="capacity">Minimum Capacity</label>
+                    <input type="number" id="capacity" min="1" placeholder="People">
+                </div>
+
+                <div class="form-group">
+                    <button class="search-btn" onclick="filterRooms()">🔍 Search Rooms</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="results-section">
+            <div class="results-header">
+                <h3 id="result-count">Available Rooms</h3>
+                <div class="sort-controls">
+                    <label for="sort">Sort by:</label>
+                    <select id="sort" onchange="sortRooms()">
+                        <option value="name">Name</option>
+                        <option value="capacity">Capacity</option>
+                        <option value="type">Facility Type</option>
+                    </select>
+                </div>
+            </div>
+            <div class="room-grid" id="room-list">
+            </div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
