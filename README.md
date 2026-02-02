@@ -20,7 +20,7 @@ The system aims to allow students to:
 
 | Role | Name |
 | :--- | :--- |
-| **Team Member** | Minzhi Liu |
-| **Team Member** | Jinyu Xie |
-| **Team Member** | Jun Bin Yap |
-| **Team Member** | Shen Chen |
+| **Team Member** | [Minzhi Liu](https://github.com/DZSMG)  |
+| **Team Member** | [Jinyu Xie](https://github.com/xiejinyu-jcu) |
+| **Team Member** | [Jun Bin Yap](https://github.com/Junbinyap) |
+| **Team Member** | [Shen Chen](https://github.com/chenshen0623) |
