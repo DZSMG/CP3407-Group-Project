@@ -181,7 +181,7 @@ function sortRooms() {
     renderRooms(currentRooms);
 }
 
-// 6. Booking Logic (NEW)
+// 6. Booking Logic
 function handleBook(id, name) {
     const date = document.getElementById('date').value;
     const time = document.getElementById('time').value;
@@ -214,7 +214,7 @@ function handleBook(id, name) {
     renderBookings();
 }
 
-// 7. Render Booking History (NEW)
+// 7. Render Booking History
 function renderBookings() {
     const container = document.getElementById('booking-list');
     if(!container) return;
@@ -244,7 +244,7 @@ function renderBookings() {
     });
 }
 
-// 8. Cancel Booking Function (NEW)
+// 8. Cancel Booking Function
 function cancelBooking(bookingId) {
     if(confirm("Are you sure you want to cancel this booking?")) {
         myBookings = myBookings.filter(b => b.bookingId !== bookingId);
@@ -253,7 +253,7 @@ function cancelBooking(bookingId) {
     }
 }
 
-// 9. View Switcher (NEW)
+// 9. View Switcher
 function switchView(viewName) {
     const homeView = document.getElementById('home-view');
     const bookingsView = document.getElementById('bookings-view');
