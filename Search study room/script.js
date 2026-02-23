@@ -1,275 +1,297 @@
-// 1. Mock Data (simulates database data)
-const mockRoomsData = [
-    {
-        id: 101,
-        name: "Activity Hub Alpha",
-        facilityType: "Activity Room",
-        capacity: 8,
-        features: ["Whiteboard", "TV Screen", "Flexible Seating"],
-        image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=500&auto=format&fit=crop&q=60",
-        status: "Available"
+// 1. Campus Data Mapping
+const rawCampusData = {
+    "Block A": {
+        desc: "Business & Finance Hub",
+        levels: {
+            "Level 1": { "Classroom": ["A1-04", "A1-05"], "Finance Lab": ["A1-03"] },
+            "Level 2": { "Classroom": ["A2-02", "A2-03", "A2-04", "A2-05", "A2-06", "A2-07"], "Computer Lab": ["A2-09"] }
+        }
     },
-    {
-        id: 102,
-        name: "Classroom 201",
-        facilityType: "Classroom",
-        capacity: 30,
-        features: ["Projector", "Whiteboard", "AC"],
-        image: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=500&auto=format&fit=crop&q=60",
-        status: "Available"
+    "Block B": {
+        desc: "IT & Engineering",
+        levels: {
+            "Level 2": { "Computer Lab": ["B2-04", "B2-05", "B2-06"], "Classroom": ["B2-07"] },
+            "Level 3": { "Classroom": ["B3-02", "B3-03", "B3-04", "B3-05", "B3-06", "B3-07"] }
+        }
     },
-    {
-        id: 103,
-        name: "Computer Lab A",
-        facilityType: "Computer Lab",
-        capacity: 25,
-        features: ["30 Computers", "Fast Internet", "Printer"],
-        image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=500&auto=format&fit=crop&q=60",
-        status: "Available"
+    "Block C": {
+        desc: "Main Lecture Block",
+        levels: {
+            "Level 1": { "Classroom": ["C1-01", "C1-02", "C1-03", "C1-04", "C1-05", "C1-06", "C1-07"], "Consultation room": ["C1-10", "C1-11", "C1-12", "C1-13"] },
+            "Level 2": { "Classroom": ["C2-02", "C2-03", "C2-04", "C2-05", "C2-06"], "Lecture Theatre": ["C2-13", "C2-14", "C2-15"] },
+            "Level 3": { "Classroom": ["C3-02", "C3-03", "C3-04", "C3-05"] },
+            "Level 4": { "Classroom": ["C4-01", "C4-02", "C4-03", "C4-04", "C4-05", "C4-06", "C4-07", "C4-08", "C4-09"], "Lecture Theatre": ["C4-13", "C4-14", "C4-15"] }
+        }
     },
-    {
-        id: 104,
-        name: "Private Pod",
-        facilityType: "Consultation Room",
-        capacity: 3,
-        features: ["Soundproof", "Video Conf", "Privacy"],
-        image: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=500&auto=format&fit=crop&q=60",
-        status: "Full"
-    },
-    {
-        id: 105,
-        name: "Financial Trading Lab",
-        facilityType: "Financial Lab",
-        capacity: 20,
-        features: ["Bloomberg Terminals", "Trading Sim"],
-        image: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&auto=format&fit=crop&q=60",
-        status: "Available"
-    },
-    {
-        id: 106,
-        name: "Main Lecture Theatre",
-        facilityType: "Lecture Theatre",
-        capacity: 150,
-        features: ["Stage", "Pro Audio", "Recording"],
-        image: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=500&auto=format&fit=crop&q=60",
-        status: "Available"
-    },
-    {
-        id: 107,
-        name: "Activity Room Beta",
-        facilityType: "Activity Room",
-        capacity: 12,
-        features: ["Movable Furniture", "Smart Screen"],
-        image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=500&auto=format&fit=crop&q=60",
-        status: "Available"
-    },
-    {
-        id: 108,
-        name: "Computer Lab B",
-        facilityType: "Computer Lab",
-        capacity: 20,
-        features: ["20 Computers", "Scanner"],
-        image: "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=500&auto=format&fit=crop&q=60",
-        status: "Full"
+    "Block E": {
+        desc: "General Studies",
+        levels: {
+            "Level 2": { "Classroom": ["E2-01", "E2-02", "E2-03", "E2-04A", "E2-04B"] }
+        }
     }
-];
-
-// Store current filtered data
-let currentRooms = [...mockRoomsData];
-
-// Store Booking History (Load from LocalStorage if available)
-let myBookings = JSON.parse(localStorage.getItem('campusBookings')) || [];
-
-// 2. Initialize page on load
-window.onload = function() {
-    // Set date input to today's date by default
-    const dateInput = document.getElementById('date');
-    if(dateInput) dateInput.valueAsDate = new Date();
-    
-    // Set default time
-    const timeInput = document.getElementById('time');
-    if(timeInput) timeInput.value = "09:00";
-    
-    // Initial render of all rooms
-    renderRooms(currentRooms);
-    renderBookings(); // Initialize booking list
 };
 
-// 3. Render function: Convert data into HTML cards
-function renderRooms(rooms) {
-    const container = document.getElementById('room-list');
-    const resultCount = document.getElementById('result-count');
+const facilityMeta = {
+    "Classroom": { cap: 40, img: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=500&auto=format&fit=crop&q=60" },
+    "Computer Lab": { cap: 30, img: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=500&auto=format&fit=crop&q=60" },
+    "Finance Lab": { cap: 25, img: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&auto=format&fit=crop&q=60" },
+    "Consultation room": { cap: 4, img: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=500&auto=format&fit=crop&q=60" },
+    "Lecture Theatre": { cap: 150, img: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=500&auto=format&fit=crop&q=60" }
+};
+
+let allRooms = [];
+let roomIdCounter = 1;
+
+for (const [building, bData] of Object.entries(rawCampusData)) {
+    for (const [floor, types] of Object.entries(bData.levels)) {
+        for (const [type, rooms] of Object.entries(types)) {
+            rooms.forEach(roomName => {
+                allRooms.push({
+                    id: roomIdCounter++,
+                    building: building,
+                    floor: floor,
+                    type: type,
+                    name: roomName,
+                    capacity: facilityMeta[type].cap,
+                    image: facilityMeta[type].img
+                });
+            });
+        }
+    }
+}
+
+// 2. Global State & Time Conflict System
+let currentBuilding = null;
+let currentFloor = null;
+
+// Global bookings database (Simulated Server)
+let globalBookings = JSON.parse(localStorage.getItem('campusGlobalBookingsV3')) || [];
+
+window.onload = function() {
+    document.getElementById('dateInput').valueAsDate = new Date();
+    document.getElementById('timeInput').value = "10:00";
+    initBuildingSelector();
+};
+
+// Helper: Convert "HH:MM" to minutes for duration calculations
+function timeToMinutes(timeStr) {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
+}
+
+// Helper: Check if room is available during requested time block
+function isRoomAvailable(roomId, targetDate, targetStartTime, durationHours) {
+    const newStart = timeToMinutes(targetStartTime);
+    const newEnd = newStart + (parseInt(durationHours) * 60);
+
+    return !globalBookings.some(booking => {
+        if (booking.roomId !== roomId || booking.date !== targetDate) return false;
+        
+        const bStart = timeToMinutes(booking.time);
+        const bEnd = bStart + (parseInt(booking.duration) * 60);
+        
+        // Conflict condition: new start is before old end AND new end is after old start
+        return (newStart < bEnd) && (newEnd > bStart);
+    });
+}
+
+// 3. UI Interaction Logic
+function initBuildingSelector() {
+    const container = document.getElementById('building-container');
+    Object.keys(rawCampusData).forEach(bldg => {
+        const card = document.createElement('div');
+        card.className = 'select-card';
+        card.innerHTML = `<h3>${bldg}</h3><p>${rawCampusData[bldg].desc}</p>`;
+        card.onclick = () => selectBuilding(bldg, card);
+        container.appendChild(card);
+    });
+}
+
+function selectBuilding(buildingName, cardElement) {
+    currentBuilding = buildingName;
+    currentFloor = null;
+    document.querySelectorAll('#building-container .select-card').forEach(el => el.classList.remove('active'));
+    cardElement.classList.add('active');
+
+    document.getElementById('step3-section').classList.add('hidden');
+    document.getElementById('step2-section').classList.remove('hidden');
     
-    if(!container) return; // Guard clause
+    const container = document.getElementById('floor-container');
+    container.innerHTML = '';
+    
+    Object.keys(rawCampusData[buildingName].levels).forEach(floor => {
+        const pill = document.createElement('button');
+        pill.className = 'pill';
+        pill.innerText = floor;
+        pill.onclick = () => selectFloor(floor, pill);
+        container.appendChild(pill);
+    });
+}
 
-    container.innerHTML = ""; // Clear current list
-    resultCount.innerText = `Found ${rooms.length} Room${rooms.length !== 1 ? 's' : ''}`;
+function selectFloor(floorName, pillElement) {
+    currentFloor = floorName;
+    document.querySelectorAll('#floor-container .pill').forEach(el => el.classList.remove('active'));
+    pillElement.classList.add('active');
 
-    if (rooms.length === 0) {
-        container.innerHTML = '<div class="loading">No rooms found matching your criteria.</div>';
+    document.getElementById('step3-section').classList.remove('hidden');
+    renderRooms();
+}
+
+function renderRooms() {
+    if (!currentBuilding || !currentFloor) return;
+
+    const typeFilter = document.getElementById('typeFilter').value;
+    const targetDate = document.getElementById('dateInput').value;
+    const targetTime = document.getElementById('timeInput').value;
+    const duration = document.getElementById('durationInput').value;
+    
+    const container = document.getElementById('room-grid');
+    container.innerHTML = '';
+
+    const filteredRooms = allRooms.filter(room => {
+        return room.building === currentBuilding && 
+               room.floor === currentFloor && 
+               (typeFilter === 'All' || room.type === typeFilter);
+    });
+
+    document.getElementById('result-count').innerText = `${filteredRooms.length} Spaces Found`;
+
+    if (filteredRooms.length === 0) {
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">No spaces match your criteria.</div>`;
         return;
     }
 
-    rooms.forEach(room => {
+    let delayCount = 0;
+
+    filteredRooms.forEach(room => {
+        // Core: Dynamically check availability based on time
+        const isAvail = isRoomAvailable(room.id, targetDate, targetTime, duration);
+        
         const card = document.createElement('div');
         card.className = 'room-card';
-        
-        const statusClass = room.status === 'Available' ? 'available' : 'full';
-        const btnDisabled = room.status === 'Available' ? '' : 'disabled';
-        const btnText = room.status === 'Available' ? 'Book Now' : 'Fully Booked';
-
-        const featuresHTML = room.features.map(feature => 
-            `<span class="feature-tag">${feature}</span>`
-        ).join('');
+        card.style.animationDelay = `${delayCount * 0.05}s`;
+        delayCount++;
 
         card.innerHTML = `
-            <img src="${room.image}" alt="${room.name}" class="room-img">
+            <div class="room-img-container">
+                <span class="status-badge ${isAvail ? 'badge-available' : 'badge-full'}">
+                    ${isAvail ? 'Available' : 'Unavailable'}
+                </span>
+                <img src="${room.image}" alt="${room.name}">
+            </div>
             <div class="room-info">
-                <span class="status-badge ${statusClass}">${room.status}</span>
                 <h3 class="room-title">${room.name}</h3>
-                <div class="room-detail">
-                    <span>🏢</span>
-                    <span>${room.facilityType}</span>
+                <div class="room-type">${room.type}</div>
+                
+                <div class="room-meta">
+                    <div class="meta-item"><span>👥</span> ${room.capacity} Pax</div>
+                    <div class="meta-item"><span>📍</span> ${room.building}</div>
                 </div>
-                <div class="room-detail">
-                    <span>👥</span>
-                    <span>Capacity: ${room.capacity}</span>
-                </div>
-                <div class="features-container">
-                    ${featuresHTML}
-                </div>
-                <button class="book-btn" ${btnDisabled} onclick="handleBook(${room.id}, '${room.name}')">${btnText}</button>
+                
+                <button class="btn ${isAvail ? 'btn-primary' : 'btn-disabled'}" 
+                        ${!isAvail ? 'disabled' : ''} 
+                        onclick="handleBook(${room.id}, '${room.name}', '${room.building}')">
+                    ${isAvail ? `Book for ${duration} hr(s)` : 'Time Slot Taken'}
+                </button>
             </div>
         `;
         container.appendChild(card);
     });
 }
 
-// 4. Search/filter logic
-function filterRooms() {
-    const facilityTypeInput = document.getElementById('facility-type').value;
-    const capacityInput = parseInt(document.getElementById('capacity').value) || 0;
-    
-    currentRooms = mockRoomsData.filter(room => {
-        if (facilityTypeInput !== 'all' && room.facilityType !== facilityTypeInput) {
-            return false;
-        }
-        if (capacityInput > 0 && room.capacity < capacityInput) {
-            return false;
-        }
-        return true;
-    });
-
-    renderRooms(currentRooms);
-}
-
-// 5. Sort rooms function
-function sortRooms() {
-    const sortBy = document.getElementById('sort').value;
-    
-    currentRooms.sort((a, b) => {
-        if (sortBy === 'name') {
-            return a.name.localeCompare(b.name);
-        } else if (sortBy === 'capacity') {
-            return b.capacity - a.capacity;
-        } else if (sortBy === 'type') {
-            return a.facilityType.localeCompare(b.facilityType);
-        }
-        return 0;
-    });
-
-    renderRooms(currentRooms);
-}
-
-// 6. Booking Logic
-function handleBook(id, name) {
-    const date = document.getElementById('date').value;
-    const time = document.getElementById('time').value;
+// 4. Booking Creation & History
+function handleBook(roomId, roomName, building) {
+    const date = document.getElementById('dateInput').value;
+    const time = document.getElementById('timeInput').value;
+    const duration = document.getElementById('durationInput').value;
 
     if(!date || !time) {
-        alert("Please select a date and time first.");
+        alert("Please select a valid date and time.");
         return;
     }
-    
-    // Create booking object
+
+    // Final validation to prevent concurrent booking conflicts
+    if(!isRoomAvailable(roomId, date, time, duration)) {
+        alert("Sorry, this room was just booked by someone else for this time slot.");
+        renderRooms();
+        return;
+    }
+
+    const bookingId = "BK-" + Math.floor(Math.random() * 90000 + 10000);
+
+    // Calculate end time for display purposes
+    const endMins = timeToMinutes(time) + (duration * 60);
+    const endHrs = Math.floor(endMins / 60).toString().padStart(2, '0');
+    const endM = (endMins % 60).toString().padStart(2, '0');
+    const endTime = `${endHrs}:${endM}`;
+
     const newBooking = {
-        bookingId: Date.now(), // Simple unique ID
-        roomId: id,
-        roomName: name,
+        id: bookingId,
+        roomId: roomId,
+        roomName: roomName,
+        location: `${building}, ${currentFloor}`,
         date: date,
         time: time,
-        timestamp: new Date().toLocaleString()
+        endTime: endTime,
+        duration: duration
     };
 
-    // Add to array
-    myBookings.push(newBooking);
+    globalBookings.push(newBooking);
+    localStorage.setItem('campusGlobalBookingsV3', JSON.stringify(globalBookings));
     
-    // Save to LocalStorage
-    localStorage.setItem('campusBookings', JSON.stringify(myBookings));
-
-    alert(`✅ Success! \n\nYou have booked ${name}\nDate: ${date}\nTime: ${time}`);
+    alert(`🎉 Booking Confirmed!\n\nSpace: ${roomName} (${building})\nTime: ${date} | ${time} - ${endTime} (${duration} hrs)`);
     
-    // Switch to bookings view to show the result
     switchView('bookings');
-    renderBookings();
 }
 
-// 7. Render Booking History
 function renderBookings() {
     const container = document.getElementById('booking-list');
-    if(!container) return;
+    container.innerHTML = '';
 
-    container.innerHTML = "";
-
-    if (myBookings.length === 0) {
-        container.innerHTML = '<p style="text-align:center; color: #666; padding: 20px;">You haven\'t made any bookings yet.</p>';
+    if (globalBookings.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 4rem; background: rgba(255,255,255,0.5); border-radius: var(--radius-lg); border: 2px dashed #CBD5E1;">
+                <h3 style="color: var(--secondary);">No bookings yet</h3>
+                <p style="color: var(--text-muted);">Your upcoming study sessions will appear here.</p>
+                <button class="btn btn-primary" style="width:auto; padding: 10px 24px; margin-top: 1rem;" onclick="switchView('home')">Find a Space</button>
+            </div>`;
         return;
     }
 
-    // Sort by most recent booking created
-    const sortedBookings = [...myBookings].sort((a, b) => b.bookingId - a.bookingId);
-
-    sortedBookings.forEach(booking => {
+    [...globalBookings].reverse().forEach(b => {
         const item = document.createElement('div');
         item.className = 'booking-item';
         item.innerHTML = `
-            <div class="booking-info">
-                <h4>${booking.roomName}</h4>
-                <p>📅 ${booking.date} at ⏰ ${booking.time}</p>
-                <p style="font-size: 0.8rem; margin-top:5px; opacity:0.7">Ref ID: #${booking.bookingId}</p>
+            <div class="b-details">
+                <h4>${b.roomName} <span style="color:var(--primary); font-size: 0.9rem; font-weight: 700;">• ${b.location}</span></h4>
+                <p>📅 ${b.date} &nbsp; ⏰ ${b.time} - ${b.endTime} <span style="color: var(--accent); font-weight:800;">(${b.duration} hrs)</span></p>
+                <div class="b-id">Ref ID: ${b.id}</div>
             </div>
-            <button class="cancel-btn" onclick="cancelBooking(${booking.bookingId})">Cancel</button>
+            <button class="btn btn-outline-danger" onclick="cancelBooking('${b.id}')">Cancel</button>
         `;
         container.appendChild(item);
     });
 }
 
-// 8. Cancel Booking Function
 function cancelBooking(bookingId) {
     if(confirm("Are you sure you want to cancel this booking?")) {
-        myBookings = myBookings.filter(b => b.bookingId !== bookingId);
-        localStorage.setItem('campusBookings', JSON.stringify(myBookings));
+        globalBookings = globalBookings.filter(b => b.id !== bookingId);
+        localStorage.setItem('campusGlobalBookingsV3', JSON.stringify(globalBookings));
         renderBookings();
     }
 }
 
-// 9. View Switcher
+// 5. View Switching
 function switchView(viewName) {
-    const homeView = document.getElementById('home-view');
-    const bookingsView = document.getElementById('bookings-view');
-    const navHome = document.getElementById('nav-home');
-    const navBookings = document.getElementById('nav-bookings');
-
-    if (viewName === 'home') {
-        homeView.style.display = 'block';
-        bookingsView.style.display = 'none';
-        navHome.classList.add('active');
-        navBookings.classList.remove('active');
-    } else {
-        homeView.style.display = 'none';
-        bookingsView.style.display = 'block';
-        navHome.classList.remove('active');
-        navBookings.classList.add('active');
-        renderBookings(); // Refresh list when viewing
+    document.getElementById('home-view').classList.toggle('hidden', viewName !== 'home');
+    document.getElementById('bookings-view').classList.toggle('hidden', viewName !== 'bookings');
+    
+    document.getElementById('nav-home').classList.toggle('active', viewName === 'home');
+    document.getElementById('nav-bookings').classList.toggle('active', viewName === 'bookings');
+    
+    if(viewName === 'bookings') {
+        renderBookings();
+    } else if(viewName === 'home') {
+        if(currentBuilding && currentFloor) renderRooms();
     }
 }
