@@ -3,84 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Campus Space | Study Room Booking</title>
+    <title>Campus Space | Premium Booking V3</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+
     <header>
         <div class="logo">
-            <h1>🌿 Campus Space</h1>
+            <span style="font-size: 1.8rem;">🏢</span>
+            <h1>Campus Space</h1>
         </div>
         <nav>
-            <a href="#" onclick="switchView('home')" class="active" id="nav-home">Find Room</a>
+            <a href="#" onclick="switchView('home')" class="active" id="nav-home">Find Space</a>
             <a href="#" onclick="switchView('bookings')" id="nav-bookings">My Bookings</a>
-            <a href="#" style="opacity: 0.5; cursor: not-allowed;">Profile</a>
         </nav>
     </header>
 
     <main>
         <div id="home-view">
-            <section class="glass-panel search-section">
-                <h2>🔍 Find your space</h2>
-                <div class="search-form">
-                    <div class="form-group">
-                        <label for="facility-type">Facility Type</label>
-                        <select id="facility-type" onchange="filterRooms()">
-                            <option value="all">All Facilities</option>
-                            <option value="Activity Room">Activity Room</option>
+            
+            <section class="glass-panel" style="animation-delay: 0s;">
+                <h2 class="section-title"><span class="step">1</span> Select Building</h2>
+                <div class="grid-selector" id="building-container"></div>
+            </section>
+
+            <section class="glass-panel hidden" id="step2-section" style="animation-delay: 0.1s;">
+                <h2 class="section-title"><span class="step">2</span> Choose Floor</h2>
+                <div class="pill-group" id="floor-container"></div>
+            </section>
+
+            <section class="glass-panel hidden" id="step3-section" style="animation-delay: 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1rem;">
+                    <h2 class="section-title" style="margin: 0;"><span class="step">3</span> Available Rooms</h2>
+                    <span id="result-count" style="color: var(--primary); font-weight: 800;">0 found</span>
+                </div>
+
+                <div class="filter-bar">
+                    <div class="input-group">
+                        <label>Date</label>
+                        <input type="date" id="dateInput" onchange="renderRooms()">
+                    </div>
+                    <div class="input-group">
+                        <label>Start Time</label>
+                        <input type="time" id="timeInput" onchange="renderRooms()">
+                    </div>
+                    <div class="input-group">
+                        <label>Duration (Max 3 hrs)</label>
+                        <select id="durationInput" onchange="renderRooms()">
+                            <option value="1">1 Hour</option>
+                            <option value="2">2 Hours</option>
+                            <option value="3">3 Hours</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Facility Type</label>
+                        <select id="typeFilter" onchange="renderRooms()">
+                            <option value="All">All Types</option>
                             <option value="Classroom">Classroom</option>
                             <option value="Computer Lab">Computer Lab</option>
-                            <option value="Consultation Room">Consultation Room</option>
-                            <option value="Financial Lab">Financial Lab</option>
+                            <option value="Finance Lab">Finance Lab</option>
+                            <option value="Consultation room">Consultation Room</option>
                             <option value="Lecture Theatre">Lecture Theatre</option>
                         </select>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="date">Date</label>
-                        <input type="date" id="date">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="time">Time</label>
-                        <input type="time" id="time">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="capacity">Min Capacity</label>
-                        <input type="number" id="capacity" min="1" placeholder="e.g. 4" oninput="filterRooms()">
-                    </div>
                 </div>
-            </section>
 
-            <section class="results-section">
-                <div class="results-header glass-panel-sm">
-                    <h3 id="result-count">Available Rooms</h3>
-                    <div class="sort-controls">
-                        <label for="sort">Sort by:</label>
-                        <select id="sort" onchange="sortRooms()">
-                            <option value="name">Name</option>
-                            <option value="capacity">Capacity</option>
-                            <option value="type">Type</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="room-grid" id="room-list">
-                    </div>
+                <div class="room-grid" id="room-grid"></div>
             </section>
         </div>
 
-        <div id="bookings-view" style="display: none;">
+        <div id="bookings-view" class="hidden">
             <section class="glass-panel">
-                <h2>📅 My Booking History</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your upcoming study sessions here.</p>
-                <div id="booking-list" class="booking-list-container">
-                    </div>
+                <h2 class="section-title" style="margin-bottom: 0.5rem;">📅 My Booking History</h2>
+                <p style="color: var(--text-muted); margin-bottom: 2rem; font-weight: 500;">Manage your upcoming study sessions.</p>
+                <div id="booking-list"></div>
             </section>
         </div>
-
     </main>
 
     <script src="script.js"></script>
