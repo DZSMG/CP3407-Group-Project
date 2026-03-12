@@ -1,22 +1,22 @@
 /* CSS Styles - iOS Liquid Glass / Natural Theme */
 :root {
-  
+    /* 核心色彩：自然、通透 */
     --primary-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); /* 清新的蓝 */
     --accent-color: #007aff; /* iOS Blue */
     --danger-color: #ff3b30; /* iOS Red */
     --success-color: #34c759; /* iOS Green */
     
-    
+    /* 玻璃拟态变量 */
     --glass-bg: rgba(255, 255, 255, 0.65);
     --glass-border: 1px solid rgba(255, 255, 255, 0.5);
     --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
     --backdrop-blur: 20px;
     
-
+    /* 文字 */
     --text-primary: #1d1d1f;
     --text-secondary: #86868b;
     
-
+    /* 布局 */
     --radius-lg: 24px;
     --radius-md: 16px;
     --radius-sm: 12px;
@@ -31,14 +31,14 @@ body {
     font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
     margin: 0;
     padding: 0;
-    
+    /* 柔和的自然色渐变背景 */
     background: radial-gradient(circle at 0% 0%, #e0c3fc 0%, #8ec5fc 100%);
     background-attachment: fixed;
     color: var(--text-primary);
     min-height: 100vh;
 }
 
-
+/* 头部导航 - 悬浮玻璃条 */
 header {
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(var(--backdrop-blur));
@@ -98,7 +98,7 @@ main {
     padding: 2rem 1rem;
 }
 
-
+/* 通用玻璃面板样式 */
 .glass-panel {
     background: var(--glass-bg);
     backdrop-filter: blur(var(--backdrop-blur));
@@ -118,7 +118,7 @@ main {
     padding: 1rem 1.5rem;
 }
 
-
+/* 搜索区域 */
 .search-section h2, .glass-panel h2 {
     margin: 0 0 1.5rem 0;
     font-size: 1.5rem;
@@ -163,7 +163,7 @@ main {
     box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15);
 }
 
-
+/* 结果列表头部 */
 .results-header {
     display: flex;
     justify-content: space-between;
@@ -185,14 +185,14 @@ main {
     cursor: pointer;
 }
 
-
+/* 房间卡片网格 */
 .room-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 2rem;
 }
 
-
+/* 房间卡片 - 液体风格 */
 .room-card {
     background: rgba(255, 255, 255, 0.75);
     backdrop-filter: blur(15px);
@@ -277,7 +277,7 @@ main {
     font-weight: 600;
 }
 
-
+/* 按钮样式 */
 .book-btn {
     width: 100%;
     padding: 1rem;
@@ -304,7 +304,7 @@ main {
     cursor: not-allowed;
 }
 
-
+/* 预定历史列表样式 */
 .booking-item {
     background: rgba(255, 255, 255, 0.6);
     padding: 1.5rem;
@@ -349,6 +349,7 @@ main {
     color: white;
 }
 
+/* 移动端适配 */
 @media (max-width: 768px) {
     header {
         flex-direction: column;
