@@ -1,47 +1,63 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Campus Space | Premium Booking V3</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>JCU Booking System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Background Gradient -->
+    <div class="bg-gradient"></div>
 
-    <div class="bg-shape shape-1"></div>
-    <div class="bg-shape shape-2"></div>
-
-    <header>
+    <!-- Header & Navigation -->
+    <header class="glass-header">
         <div class="logo">
-            <span style="font-size: 1.8rem;">🏢</span>
-            <h1>Campus Space</h1>
+            <h1>JCU Booking System</h1>
         </div>
         <nav>
-            <a href="#" onclick="switchView('home')" class="active" id="nav-home">Find Space</a>
-            <a href="#" onclick="switchView('bookings')" id="nav-bookings">My Bookings</a>
+            <div class="nav-links">
+                <a href="#" id="nav-home" class="active" onclick="switchView('home'); return false;">Find Space</a>
+                <a href="#" id="nav-bookings" onclick="switchView('bookings'); return false;">My Bookings</a>
+            </div>
+            <div class="nav-actions">
+                <button class="btn-icon" id="themeToggle" aria-label="Toggle theme">
+                    <svg id="sunIcon" viewBox="0 0 24 24" style="display: none;">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+                    </svg>
+                    <svg id="moonIcon" viewBox="0 0 24 24">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+                <button class="btn-login-header" onclick="openModal()">Log In</button>
+            </div>
         </nav>
     </header>
 
     <main>
+        <!-- Home View -->
         <div id="home-view">
-            
-            <section class="glass-panel" style="animation-delay: 0s;">
+            <!-- Step 1: Building Selection -->
+            <section class="glass-panel" id="step1-section">
                 <h2 class="section-title"><span class="step">1</span> Select Building</h2>
                 <div class="grid-selector" id="building-container"></div>
             </section>
 
-            <section class="glass-panel hidden" id="step2-section" style="animation-delay: 0.1s;">
+            <!-- Step 2: Floor Selection -->
+            <section class="glass-panel hidden" id="step2-section">
                 <h2 class="section-title"><span class="step">2</span> Choose Floor</h2>
                 <div class="pill-group" id="floor-container"></div>
             </section>
 
-            <section class="glass-panel hidden" id="step3-section" style="animation-delay: 0.2s;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1rem;">
-                    <h2 class="section-title" style="margin: 0;"><span class="step">3</span> Available Rooms</h2>
-                    <span id="result-count" style="color: var(--primary); font-weight: 800;">0 found</span>
+            <!-- Step 3: Room Selection -->
+            <section class="glass-panel hidden" id="step3-section">
+                <div class="section-header">
+                    <h2 class="section-title"><span class="step">3</span> Available Rooms</h2>
+                    <span class="result-count" id="result-count">0 found</span>
                 </div>
-
+                
                 <div class="filter-bar">
                     <div class="input-group">
                         <label>Date</label>
@@ -76,14 +92,44 @@
             </section>
         </div>
 
+        <!-- Bookings View -->
         <div id="bookings-view" class="hidden">
             <section class="glass-panel">
-                <h2 class="section-title" style="margin-bottom: 0.5rem;">📅 My Booking History</h2>
-                <p style="color: var(--text-muted); margin-bottom: 2rem; font-weight: 500;">Manage your upcoming study sessions.</p>
+                <h2 class="section-title">My Booking History</h2>
+                <p class="text-muted" style="margin-bottom: 2rem;">Manage your upcoming study sessions.</p>
                 <div id="booking-list"></div>
             </section>
         </div>
     </main>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay hidden" id="loginModal">
+        <div class="modal-container glass-panel">
+            <h3 class="modal-title">Authentication Required</h3>
+            <div class="form-grid">
+                <div class="form-label">Login as:</div>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="userType" value="staff" checked> Staff
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="userType" value="student"> Existing Student
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="userType" value="prearrival"> Pre Arrival (New) Student
+                    </label>
+                </div>
+                <div class="form-label">Student ID:</div>
+                <input type="text" id="studentId" class="glass-input" placeholder="Enter your ID">
+                <div class="form-label">Password:</div>
+                <input type="password" class="glass-input" placeholder="Enter password">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="processLogin()">Log In</button>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
