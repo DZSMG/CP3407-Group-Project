@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:16-alpine
@@ -11,6 +9,34 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./backend
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/campus_booking
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      NODE_ENV: production
+      CORS_ORIGIN: http://localhost:5173
+    restart: unless-stopped
+
+  web:
+    image: nginx:alpine
+    ports:
+      - "5173:80"
+    volumes:
+      - ../Search study room:/usr/share/nginx/html:ro
+    depends_on:
+      - api
 
 volumes:
   pgdata:
