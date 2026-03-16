@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../lib/prisma';
 import { authenticate } from '../middleware/auth.middleware';
+import { emitRoomStatusChange } from '../cron/roomStatus';
 
 const router = Router();
 router.use(authenticate);
@@ -118,6 +119,18 @@ router.post('/', async (req: Request, res: Response) => {
       });
     });
 
+    // Emit real-time status if booking is currently active
+    const currentTime = new Date().toTimeString().slice(0, 5);
+    const bookingDate2 = new Date(date);
+    const today2 = new Date();
+    today2.setHours(0, 0, 0, 0);
+    if (bookingDate2.getTime() === today2.getTime() && startTime <= currentTime && endTime > currentTime) {
+      const io = req.app.get('io');
+      if (io) {
+        await emitRoomStatusChange(io, booking.roomId, booking.room.buildingId, booking.room.floor, true, booking.id);
+      }
+    }
+
     res.status(201).json({ booking });
   } catch (err: any) {
     if (err.code === 'CONFLICT') {
@@ -167,6 +180,18 @@ router.patch('/:id/cancel', async (req: Request, res: Response) => {
     data: { status: 'CANCELLED' },
     include: { room: { include: { building: true } } },
   });
+
+  // Emit real-time status change if booking was currently active
+  const currentTime2 = new Date().toTimeString().slice(0, 5);
+  const bDate = new Date(booking.date);
+  const today3 = new Date();
+  today3.setHours(0, 0, 0, 0);
+  if (bDate.getTime() === today3.getTime() && booking.startTime <= currentTime2 && booking.endTime > currentTime2) {
+    const io = req.app.get('io');
+    if (io) {
+      await emitRoomStatusChange(io, updated.roomId, updated.room.buildingId, updated.room.floor, false, null);
+    }
+  }
 
   res.json({ booking: updated });
 });
