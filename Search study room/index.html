@@ -13,7 +13,136 @@
 
     <!-- Header & Navigation -->
     <header class="glass-header">
+        <div class="logo"><!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JCU Booking System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="bg-gradient"></div>
+
+    <header class="glass-header">
         <div class="logo">
+            <h1>JCU Booking System</h1>
+        </div>
+        <nav>
+            <div class="nav-links">
+                <a href="#" id="nav-home" class="active" onclick="switchView('home'); return false;">Find Space</a>
+                <a href="#" id="nav-bookings" onclick="switchView('bookings'); return false;">My Bookings</a>
+            </div>
+            <div class="nav-actions">
+                <button class="btn-icon" id="themeToggle" aria-label="Toggle theme">
+                    <svg id="sunIcon" viewBox="0 0 24 24" style="display: none;">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+                    </svg>
+                    <svg id="moonIcon" viewBox="0 0 24 24">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+                <button class="btn-login-header" onclick="openModal()">Log In</button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div id="home-view">
+            <section class="glass-panel" id="step1-section">
+                <h2 class="section-title"><span class="step">1</span> Select Building</h2>
+                <div class="grid-selector" id="building-container"></div>
+            </section>
+
+            <section class="glass-panel hidden" id="step2-section">
+                <h2 class="section-title"><span class="step">2</span> Choose Floor</h2>
+                <div class="pill-group" id="floor-container"></div>
+            </section>
+
+            <section class="glass-panel hidden" id="step3-section">
+                <div class="section-header">
+                    <h2 class="section-title"><span class="step">3</span> Available Spaces</h2>
+                    <span class="result-count" id="result-count">0 found</span>
+                </div>
+                
+                <div class="filter-bar">
+                    <div class="input-group">
+                        <label>Date</label>
+                        <input type="date" id="dateInput" onchange="renderRooms()">
+                    </div>
+                    <div class="input-group">
+                        <label>Start Time</label>
+                        <input type="time" id="timeInput" onchange="renderRooms()">
+                    </div>
+                    <div class="input-group">
+                        <label>Duration (Max 3 hrs)</label>
+                        <select id="durationInput" onchange="renderRooms()">
+                            <option value="1">1 Hour</option>
+                            <option value="2">2 Hours</option>
+                            <option value="3">3 Hours</option>
+                        </select>
+                    </div>
+                    <div class="input-group" id="typeFilterContainer">
+                        <label>Facility Type</label>
+                        <select id="typeFilter" onchange="renderRooms()">
+                            <option value="All">All Types</option>
+                            <option value="Classroom">Classroom</option>
+                            <option value="Computer Lab">Computer Lab</option>
+                            <option value="Finance Lab">Finance Lab</option>
+                            <option value="Consultation room">Consultation Room</option>
+                            <option value="Lecture Theatre">Lecture Theatre</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="room-grid" id="room-grid"></div>
+
+                <div id="library-map-section" class="hidden">
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-box" style="background: var(--primary);"></div> Available</div>
+                        <div class="legend-item"><div class="legend-box" style="background: var(--danger);"></div> Taken</div>
+                        <div class="legend-item"><div class="legend-box" style="background: var(--text-tertiary);"></div> Public Area (No Booking)</div>
+                    </div>
+                    <div id="library-map-container"></div>
+                </div>
+            </section>
+        </div>
+
+        <div id="bookings-view" class="hidden">
+            <section class="glass-panel">
+                <h2 class="section-title">My Booking History</h2>
+                <p class="text-muted" style="margin-bottom: 2rem;">Manage your upcoming study sessions.</p>
+                <div id="booking-list"></div>
+            </section>
+        </div>
+    </main>
+
+    <div class="modal-overlay hidden" id="loginModal">
+        <div class="modal-container glass-panel">
+            <h3 class="modal-title">Authentication Required</h3>
+            <div class="form-grid">
+                <div class="form-label">Login as:</div>
+                <div class="radio-group">
+                    <label class="radio-label"><input type="radio" name="userType" value="staff" checked> Staff</label>
+                    <label class="radio-label"><input type="radio" name="userType" value="student"> Existing Student</label>
+                </div>
+                <div class="form-label">Student ID:</div>
+                <input type="text" id="studentId" class="glass-input" placeholder="Enter your ID (Required)">
+                <div class="form-label">Password:</div>
+                <input type="password" class="glass-input" placeholder="Enter password">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="processLogin()">Confirm Booking</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
             <h1>JCU Booking System</h1>
         </div>
         <nav>
