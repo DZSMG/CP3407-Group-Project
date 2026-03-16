@@ -38,6 +38,58 @@ let currentFloor = null;
 let pendingBooking = null;
 let allBuildingsCache = [];
 
+// WebSocket state
+let socket = null;
+let subscribedFloor = null;
+
+function connectSocket() {
+    if (socket) return;
+    socket = io('http://localhost:3001');
+
+    socket.on('room:statusChange', (data) => {
+        // data = { roomId, isOccupied, currentBookingId }
+        if (currentBuilding === 'Library') {
+            const seatBtn = document.querySelector(`[data-seat-num="${data.roomId}"]`);
+            if (seatBtn) {
+                const isPublic = seatBtn.classList.contains('public');
+                if (!isPublic) {
+                    seatBtn.className = `seat ${data.isOccupied ? 'booked' : 'available'}`;
+                    if (!data.isOccupied) {
+                        const seatId = findLibrarySeatId(parseInt(seatBtn.getAttribute('data-seat-num')));
+                        if (seatId) seatBtn.onclick = () => handleBook(seatId, seatBtn.title.split(' -')[0], 'Library');
+                    } else {
+                        seatBtn.onclick = null;
+                    }
+                }
+            }
+        } else {
+            const card = document.querySelector(`[data-room-id="${data.roomId}"]`);
+            if (card) {
+                const badge = card.querySelector('.status-badge');
+                const btn = card.querySelector('.btn');
+                if (badge) {
+                    badge.className = `status-badge ${data.isOccupied ? 'badge-full' : 'badge-available'}`;
+                    badge.textContent = data.isOccupied ? 'Occupied' : 'Available';
+                }
+                if (btn) {
+                    btn.className = `btn ${data.isOccupied ? 'btn-disabled' : 'btn-primary'}`;
+                    btn.disabled = data.isOccupied;
+                    btn.textContent = data.isOccupied ? 'Unavailable' : 'Book Space';
+                }
+            }
+        }
+    });
+}
+
+function subscribeToFloor(buildingId, floor) {
+    if (!socket) connectSocket();
+    if (subscribedFloor) {
+        socket.emit('unsubscribe:floor', subscribedFloor);
+    }
+    subscribedFloor = { buildingId, floor };
+    socket.emit('subscribe:floor', subscribedFloor);
+}
+
 // Theme Toggle
 const themeToggle = document.getElementById('themeToggle');
 const html = document.documentElement;
@@ -66,6 +118,7 @@ window.onload = async function() {
     document.getElementById('dateInput').valueAsDate = new Date();
     document.getElementById('timeInput').value = "10:00";
     updateAuthUI();
+    connectSocket();
     await initBuildingSelector();
 };
 
@@ -144,6 +197,7 @@ function selectFloor(floorName, pillElement) {
     document.querySelectorAll('#floor-container .pill').forEach(el => el.classList.remove('active'));
     pillElement.classList.add('active');
     document.getElementById('step3-section').classList.remove('hidden');
+    subscribeToFloor(currentBuildingId, currentFloor);
     renderRooms();
 }
 
