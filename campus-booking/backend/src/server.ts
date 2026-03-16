@@ -4,6 +4,7 @@ import corsMiddleware from './middleware/cors';
 import { errorHandler } from './middleware/errorHandler';
 import healthRouter from './routes/health';
 import authRouter from './routes/auth';
+import roomsRouter from './routes/rooms';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -13,6 +14,7 @@ app.use(express.json());
 
 app.use('/api', healthRouter);
 app.use('/api/auth', authRouter);
+app.use('/api', roomsRouter);
 
 app.use(errorHandler);
 
