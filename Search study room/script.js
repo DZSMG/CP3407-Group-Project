@@ -1,20 +1,10 @@
-// 1. Campus Data Mapping (Added Library)
-const rawCampusData = {
-    "Block A ": { desc: "Business & Finance Hub ", levels: { "Level 1 ": { "Classroom ": ["A1-04 ", "A1-05 "], "Finance Lab ": ["A1-03 "] }, "Level 2 ": { "Classroom ": ["A2-02 ", "A2-03 ", "A2-04 ", "A2-05 ", "A2-06 ", "A2-07 "], "Computer Lab ": ["A2-09 "] } } },
-    "Block B ": { desc: "IT & Engineering ", levels: { "Level 2 ": { "Computer Lab ": ["B2-04 ", "B2-05 ", "B2-06 "], "Classroom ": ["B2-07 "] }, "Level 3 ": { "Classroom ": ["B3-02 ", "B3-03 ", "B3-04 ", "B3-05 ", "B3-06 ", "B3-07 "] } } },
-    "Block C ": { desc: "Main Lecture Block ", levels: { "Level 1 ": { "Classroom ": ["C1-01 ", "C1-02 ", "C1-03 ", "C1-04 ", "C1-05 ", "C1-06 ", "C1-07 "], "Consultation room ": ["C1-10 ", "C1-11 ", "C1-12 ", "C1-13 "] }, "Level 2 ": { "Classroom ": ["C2-02 ", "C2-03 ", "C2-04 ", "C2-05 ", "C2-06 "], "Lecture Theatre ": ["C2-13 ", "C2-14 ", "C2-15 "] }, "Level 3 ": { "Classroom ": ["C3-02 ", "C3-03 ", "C3-04 ", "C3-05 "] }, "Level 4 ": { "Classroom ": ["C4-01 ", "C4-02 ", "C4-03 ", "C4-04 ", "C4-05 ", "C4-06 ", "C4-07 ", "C4-08 ", "C4-09 "], "Lecture Theatre ": ["C4-13 ", "C4-14 ", "C4-15 "] } } },
-    "Block E ": { desc: "General Studies ", levels: { "Level 2 ": { "Classroom ": ["E2-01 ", "E2-02 ", "E2-03 ", "E2-04A ", "E2-04B "] } } },
-    "Library": { desc: "Quiet Study & Research", levels: { "Level 1": {}, "Level 2": {} } }
-};
-
-// Library Maps Logic Based on User Diagram
-// Each block array has two inner arrays representing Back-to-Back desk rows. The gap between block arrays represents the 'Rectangle Gaps' from drawing.
+// Library seat layout — purely UI concern for rendering the map grid
 const libraryMapData = {
     "Level 1": {
-        unbookable: [1,2,3,4,5], 
+        unbookable: [1,2,3,4,5],
         left: [
-            [[1, 2], [10, 9]], 
-            [[11, 12, 13, 14], [18, 19, 20, 21]], 
+            [[1, 2], [10, 9]],
+            [[11, 12, 13, 14], [18, 19, 20, 21]],
             [[22, 23, 24, 25], [32, 33, 34, 35]]
         ],
         right: [
@@ -24,7 +14,7 @@ const libraryMapData = {
         ]
     },
     "Level 2": {
-        unbookable: [1,2,3,4,5,6,7,8], 
+        unbookable: [1,2,3,4,5,6,7,8],
         left: [
             [[5,6,7,8], [9,10,11,12]],
             [[21,22,23,24], [25,26,27,28]],
@@ -41,33 +31,12 @@ const libraryMapData = {
     }
 };
 
-const facilityMeta = {
-    "Classroom ": { cap: 40, img: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=500&auto=format&fit=crop&q=60" },
-    "Computer Lab ": { cap: 30, img: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=500&auto=format&fit=crop&q=60" },
-    "Finance Lab ": { cap: 25, img: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&auto=format&fit=crop&q=60" },
-    "Consultation room ": { cap: 4, img: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=500&auto=format&fit=crop&q=60" },
-    "Lecture Theatre ": { cap: 150, img: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=500&auto=format&fit=crop&q=60" }
-};
-
-let allRooms = [];
-let roomIdCounter = 1;
-
-for (const [building, bData] of Object.entries(rawCampusData)) {
-    if(building === "Library") continue; // Handled separately
-    for (const [floor, types] of Object.entries(bData.levels)) {
-        for (const [type, rooms] of Object.entries(types)) {
-            rooms.forEach(roomName => {
-                allRooms.push({ id: roomIdCounter++, building: building, floor: floor, type: type, name: roomName, capacity: facilityMeta[type].cap, image: facilityMeta[type].img });
-            });
-        }
-    }
-}
-
-// Global State
+// Global state
 let currentBuilding = null;
+let currentBuildingId = null;
 let currentFloor = null;
 let pendingBooking = null;
-let globalBookings = JSON.parse(localStorage.getItem('campusGlobalBookingsV4')) || [];
+let allBuildingsCache = [];
 
 // Theme Toggle
 const themeToggle = document.getElementById('themeToggle');
@@ -92,66 +61,82 @@ if (themeToggle) {
     });
 }
 
-window.onload = function() {
+window.onload = async function() {
     initTheme();
     document.getElementById('dateInput').valueAsDate = new Date();
     document.getElementById('timeInput').value = "10:00";
-    initBuildingSelector();
+    updateAuthUI();
+    await initBuildingSelector();
 };
 
-function timeToMinutes(timeStr) {
-    const [h, m] = timeStr.split(':').map(Number);
-    return h * 60 + m;
+function updateAuthUI() {
+    const user = api.getUser();
+    const loginBtn = document.querySelector('.btn-login-header');
+    if (user && api.isLoggedIn()) {
+        loginBtn.textContent = `${user.studentId} ▾`;
+        loginBtn.onclick = () => {
+            if (confirm('Log out?')) {
+                api.clearToken();
+                updateAuthUI();
+                renderBookings();
+            }
+        };
+    } else {
+        loginBtn.textContent = 'Log In';
+        loginBtn.onclick = openModal;
+    }
 }
 
-function isRoomAvailable(roomId, targetDate, targetStartTime, durationHours) {
-    const newStart = timeToMinutes(targetStartTime);
-    const newEnd = newStart + (parseInt(durationHours) * 60);
-    return !globalBookings.some(booking => {
-        if (booking.roomId !== roomId || booking.date !== targetDate) return false;
-        const bStart = timeToMinutes(booking.time);
-        const bEnd = bStart + (parseInt(booking.duration) * 60);
-        return (newStart < bEnd) && (newEnd > bStart);
-    });
+function openModal() {
+    document.getElementById('loginModal').classList.remove('hidden');
 }
 
-// Date helper for Library Weekly Quota calculation
-function getWeekNumber(dateString) {
-    const d = new Date(dateString);
-    d.setHours(0,0,0,0);
-    d.setDate(d.getDate() + 4 - (d.getDay()||7));
-    return Math.ceil((((d - new Date(d.getFullYear(),0,1))/8.64e7)+1)/7);
-}
-
-// UI Rendering
-function initBuildingSelector() {
+// Building selector — loads from API
+async function initBuildingSelector() {
     const container = document.getElementById('building-container');
-    Object.keys(rawCampusData).forEach(bldg => {
-        const card = document.createElement('div');
-        card.className = 'select-card';
-        card.innerHTML = `<h3>${bldg}</h3><p>${rawCampusData[bldg].desc}</p>`;
-        card.onclick = () => selectBuilding(bldg, card);
-        container.appendChild(card);
-    });
+    container.innerHTML = '<p style="color:var(--text-muted)">Loading...</p>';
+    try {
+        const { buildings } = await api.getBuildings();
+        allBuildingsCache = buildings;
+        container.innerHTML = '';
+        buildings.forEach(bldg => {
+            const card = document.createElement('div');
+            card.className = 'select-card';
+            card.innerHTML = `<h3>${bldg.name}</h3><p>${bldg.description}</p>`;
+            card.onclick = () => selectBuilding(bldg, card);
+            container.appendChild(card);
+        });
+    } catch (err) {
+        container.innerHTML = `<p style="color:var(--danger)">Failed to load buildings: ${err.message}</p>`;
+    }
 }
 
-function selectBuilding(buildingName, cardElement) {
-    currentBuilding = buildingName;
+async function selectBuilding(bldg, cardElement) {
+    currentBuilding = bldg.name;
+    currentBuildingId = bldg.id;
     currentFloor = null;
     document.querySelectorAll('#building-container .select-card').forEach(el => el.classList.remove('active'));
     cardElement.classList.add('active');
     document.getElementById('step3-section').classList.add('hidden');
     document.getElementById('step2-section').classList.remove('hidden');
 
+    // Load floors from rooms API
     const container = document.getElementById('floor-container');
-    container.innerHTML = '';
-    Object.keys(rawCampusData[buildingName].levels).forEach(floor => {
-        const pill = document.createElement('button');
-        pill.className = 'pill';
-        pill.innerText = floor;
-        pill.onclick = () => selectFloor(floor, pill);
-        container.appendChild(pill);
-    });
+    container.innerHTML = '<span style="color:var(--text-muted)">Loading floors...</span>';
+    try {
+        const { rooms } = await api.getRooms(bldg.id);
+        const floors = [...new Set(rooms.map(r => r.floor))].sort();
+        container.innerHTML = '';
+        floors.forEach(floor => {
+            const pill = document.createElement('button');
+            pill.className = 'pill';
+            pill.innerText = floor;
+            pill.onclick = () => selectFloor(floor, pill);
+            container.appendChild(pill);
+        });
+    } catch (err) {
+        container.innerHTML = `<span style="color:var(--danger)">Error: ${err.message}</span>`;
+    }
 }
 
 function selectFloor(floorName, pillElement) {
@@ -162,72 +147,94 @@ function selectFloor(floorName, pillElement) {
     renderRooms();
 }
 
-function renderRooms() {
+async function renderRooms() {
     if (!currentBuilding || !currentFloor) return;
-    
+
     const targetDate = document.getElementById('dateInput').value;
     const targetTime = document.getElementById('timeInput').value;
-    const duration = document.getElementById('durationInput').value;
+    const duration = parseInt(document.getElementById('durationInput').value);
 
-    if(currentBuilding === "Library") {
+    if (currentBuilding === 'Library') {
         document.getElementById('typeFilterContainer').style.display = 'none';
         document.getElementById('room-grid').classList.add('hidden');
         document.getElementById('library-map-section').classList.remove('hidden');
-        renderLibraryMap(targetDate, targetTime, duration);
+        await renderLibraryMap(targetDate, targetTime, duration);
         return;
     }
 
-    // Standard Room logic
     document.getElementById('typeFilterContainer').style.display = 'block';
     document.getElementById('room-grid').classList.remove('hidden');
     document.getElementById('library-map-section').classList.add('hidden');
-    
+
     const typeFilter = document.getElementById('typeFilter').value;
     const container = document.getElementById('room-grid');
-    container.innerHTML = '';
+    container.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:2rem">Loading rooms...</p>';
 
-    const filteredRooms = allRooms.filter(room => room.building === currentBuilding && room.floor === currentFloor && (typeFilter === 'All' || room.type === typeFilter));
-    document.getElementById('result-count').innerText = `${filteredRooms.length} Spaces Found`;
+    try {
+        const { rooms } = await api.getFloorAvailability(currentBuildingId, currentFloor, targetDate, targetTime, duration);
 
-    if (filteredRooms.length === 0) {
-        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">No spaces match criteria.</div>`;
-        return;
+        const filteredRooms = typeFilter === 'All'
+            ? rooms
+            : rooms.filter(r => r.room.type === typeFilter.toUpperCase().replace(/ /g, '_'));
+
+        document.getElementById('result-count').innerText = `${filteredRooms.length} Spaces Found`;
+        container.innerHTML = '';
+
+        if (filteredRooms.length === 0) {
+            container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">No spaces match criteria.</div>`;
+            return;
+        }
+
+        filteredRooms.forEach(({ room, isAvailable }, idx) => {
+            const typeLabel = room.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            const card = document.createElement('div');
+            card.className = 'room-card';
+            card.setAttribute('data-room-id', room.id);
+            card.style.animationDelay = `${idx * 0.05}s`;
+            card.innerHTML = `
+                <div class="room-img-container">
+                    <span class="status-badge ${isAvailable ? 'badge-available' : 'badge-full'}">${isAvailable ? 'Available' : 'Taken'}</span>
+                    ${room.imageUrl ? `<img src="${room.imageUrl}" alt="">` : ''}
+                </div>
+                <div class="room-info">
+                    <h3 class="room-title">${room.name}</h3>
+                    <div class="room-type">${typeLabel}</div>
+                    <div class="room-meta"><div class="meta-item">Cap: ${room.capacity}</div><div class="meta-item">${room.building.name}</div></div>
+                    <button class="btn ${isAvailable ? 'btn-primary' : 'btn-disabled'}" ${!isAvailable ? 'disabled' : ''}
+                        onclick="handleBook(${room.id}, '${room.name}', '${room.building.name}')">${isAvailable ? 'Book Space' : 'Unavailable'}</button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    } catch (err) {
+        container.innerHTML = `<p style="color:var(--danger);grid-column:1/-1;text-align:center;padding:2rem">Error: ${err.message}</p>`;
     }
-
-    filteredRooms.forEach((room, idx) => {
-        const isAvail = isRoomAvailable(room.id, targetDate, targetTime, duration);
-        const card = document.createElement('div');
-        card.className = 'room-card';
-        card.style.animationDelay = `${idx * 0.05}s`;
-        card.innerHTML = `
-            <div class="room-img-container">
-                <span class="status-badge ${isAvail ? 'badge-available' : 'badge-full'}">${isAvail ? 'Available' : 'Taken'}</span>
-                <img src="${room.image}" alt="">
-            </div>
-            <div class="room-info">
-                <h3 class="room-title">${room.name}</h3>
-                <div class="room-type">${room.type}</div>
-                <div class="room-meta"><div class="meta-item">Cap: ${room.capacity}</div><div class="meta-item">${room.building}</div></div>
-                <button class="btn ${isAvail ? 'btn-primary' : 'btn-disabled'}" ${!isAvail ? 'disabled' : ''} 
-                    onclick="handleBook('${room.id}', '${room.name}', '${room.building}')">${isAvail ? 'Book Space' : 'Unavailable'}</button>
-            </div>
-        `;
-        container.appendChild(card);
-    });
 }
 
-function renderLibraryMap(date, time, duration) {
+async function renderLibraryMap(date, time, duration) {
     const container = document.getElementById('library-map-container');
     container.innerHTML = '';
     const floorData = libraryMapData[currentFloor];
     if (!floorData) return;
 
-    let totalSeats = 0;
+    // Fetch availability from API
+    let availabilityMap = {};
+    try {
+        const { rooms } = await api.getFloorAvailability(currentBuildingId, currentFloor, date, time, duration);
+        rooms.forEach(({ room, isAvailable }) => {
+            // Extract seat number from name e.g. "Lib-L1-5" -> 5
+            const match = room.name.match(/\d+$/);
+            if (match) availabilityMap[parseInt(match[0])] = isAvailable;
+        });
+    } catch (err) {
+        container.innerHTML = `<p style="color:var(--danger)">Error loading seats: ${err.message}</p>`;
+        return;
+    }
 
+    let totalSeats = 0;
     const mapWrapper = document.createElement('div');
     mapWrapper.className = 'library-layout';
 
-    // Build Map Side
     const createSide = (sideData) => {
         const sideDiv = document.createElement('div');
         sideDiv.className = 'map-side';
@@ -235,23 +242,26 @@ function renderLibraryMap(date, time, duration) {
             const blockDiv = document.createElement('div');
             blockDiv.className = 'desk-block';
             block.forEach(row => {
-                if(!row || row.length===0) return;
+                if (!row || row.length === 0) return;
                 const rowDiv = document.createElement('div');
                 rowDiv.className = 'desk-row';
                 row.forEach(seatNum => {
                     totalSeats++;
                     const isPublic = floorData.unbookable.includes(seatNum);
-                    const seatId = `Lib-${currentFloor}-${seatNum}`;
-                    const seatName = `${currentFloor === 'Level 1' ? 'L1' : 'L2'}-${seatNum}`;
-                    const isAvail = isRoomAvailable(seatId, date, time, duration);
+                    const levelPrefix = currentFloor === 'Level 1' ? 'L1' : 'L2';
+                    const seatName = `${levelPrefix}-${seatNum}`;
+                    const isAvail = availabilityMap[seatNum] !== undefined ? availabilityMap[seatNum] : true;
 
                     const btn = document.createElement('button');
                     btn.className = `seat ${isPublic ? 'public' : (isAvail ? 'available' : 'booked')}`;
                     btn.innerText = seatNum;
+                    btn.setAttribute('data-seat-num', seatNum);
                     btn.title = isPublic ? `${seatName} (Public/No Booking)` : `${seatName} - Click to book`;
-                    
-                    if(!isPublic && isAvail) {
-                        btn.onclick = () => handleBook(seatId, seatName, "Library");
+
+                    if (!isPublic && isAvail) {
+                        // Find the room id from the API response
+                        const seatId = findLibrarySeatId(seatNum);
+                        if (seatId) btn.onclick = () => handleBook(seatId, seatName, 'Library');
                     }
                     rowDiv.appendChild(btn);
                 });
@@ -263,29 +273,37 @@ function renderLibraryMap(date, time, duration) {
     };
 
     mapWrapper.appendChild(createSide(floorData.left));
-    
     const corridor = document.createElement('div');
     corridor.className = 'corridor';
     corridor.innerHTML = 'CORRIDOR';
     mapWrapper.appendChild(corridor);
-    
     mapWrapper.appendChild(createSide(floorData.right));
-    
+
     container.appendChild(mapWrapper);
     document.getElementById('result-count').innerText = `${totalSeats} Seats Found`;
+
+    // Store availability for seat ID lookup
+    window._libraryRoomsCache = {};
+    try {
+        const { rooms } = await api.getFloorAvailability(currentBuildingId, currentFloor, date, time, duration);
+        rooms.forEach(({ room }) => {
+            const match = room.name.match(/\d+$/);
+            if (match) window._libraryRoomsCache[parseInt(match[0])] = room.id;
+        });
+    } catch (_) {}
+}
+
+function findLibrarySeatId(seatNum) {
+    return window._libraryRoomsCache ? window._libraryRoomsCache[seatNum] : null;
 }
 
 function handleBook(roomId, roomName, building) {
     const date = document.getElementById('dateInput').value;
     const time = document.getElementById('timeInput').value;
-    const duration = document.getElementById('durationInput').value;
+    const duration = parseInt(document.getElementById('durationInput').value);
     if (!date || !time) return alert("Please select a valid date and time.");
 
-    if (!isRoomAvailable(roomId, date, time, duration)) {
-        alert("Sorry, this seat/room was just booked by someone else.");
-        renderRooms(); return;
-    }
-    pendingBooking = { roomId, roomName, building, date, time, duration };
+    pendingBooking = { roomId, roomName, building, date, startTime: time, durationHours: duration };
     document.getElementById('loginModal').classList.remove('hidden');
 }
 
@@ -294,89 +312,97 @@ function closeModal() {
     pendingBooking = null;
 }
 
-function processLogin() {
-    const studentId = document.getElementById('studentId').value;
-    if(!studentId) {
-        alert("Student ID is strictly required to enforce booking quotas.");
+async function processLogin() {
+    const studentId = document.getElementById('studentId').value.trim();
+    const password = document.getElementById('passwordInput')?.value || '';
+
+    if (!studentId) {
+        alert("Student ID is required.");
         return;
     }
 
-    if (pendingBooking) {
-        const { roomId, roomName, building, date, time, duration } = pendingBooking;
-
-        if (!isRoomAvailable(roomId, date, time, duration)) {
-            alert("Space became unavailable during login.");
-            closeModal(); renderRooms(); return;
+    try {
+        // Login if not already logged in
+        if (!api.isLoggedIn()) {
+            const { token, user } = await api.login(studentId, password);
+            api.setToken(token);
+            api.setUser(user);
+            updateAuthUI();
         }
 
-        // Library Constraint Checking
-        if(building === "Library") {
-            const targetWeek = getWeekNumber(date);
-            const libBookingsThisWeek = globalBookings.filter(b => 
-                b.studentId === studentId && 
-                b.building === "Library" && 
-                getWeekNumber(b.date) === targetWeek
-            );
-            
-            if(libBookingsThisWeek.length >= 3) {
-                alert(`Limit Reached!\n\nStudent ID [${studentId}] has already booked Library spaces 3 times this week. You cannot book anymore.`);
-                closeModal();
-                return;
-            }
+        if (pendingBooking) {
+            const { roomId, roomName, building, date, startTime, durationHours } = pendingBooking;
+            const { booking } = await api.createBooking(roomId, date, startTime, durationHours);
+
+            const endTime = booking.endTime;
+            alert(`Booking Confirmed!\nSpace: ${roomName} (${building})\nTime: ${date} | ${startTime} - ${endTime}`);
+            closeModal();
+            switchView('bookings');
         }
-
-        const endTime = (timeToMinutes(time) + (duration * 60));
-        const endStr = `${Math.floor(endTime/60).toString().padStart(2,'0')}:${(endTime%60).toString().padStart(2,'0')}`;
-        
-        const newBooking = {
-            id: "BK-" + Math.floor(Math.random() * 90000 + 10000),
-            studentId: studentId,
-            roomId: roomId,
-            roomName: roomName,
-            building: building,
-            location: `${building}, ${currentFloor}`,
-            date: date,
-            time: time,
-            endTime: endStr,
-            duration: duration
-        };
-
-        globalBookings.push(newBooking);
-        localStorage.setItem('campusGlobalBookingsV4', JSON.stringify(globalBookings));
-        alert(`Booking Confirmed!\nSpace: ${roomName} (${building})\nTime: ${date} | ${time} - ${endStr}`);
-        
-        closeModal();
-        switchView('bookings');
+    } catch (err) {
+        if (err.status === 409) {
+            alert('This time slot was just taken by someone else. Please choose a different time.');
+            closeModal();
+            renderRooms();
+        } else if (err.status === 429) {
+            alert('Library booking limit reached: you can only book 3 library seats per week.');
+            closeModal();
+        } else if (err.status === 401) {
+            alert('Invalid student ID or password. Please try again.');
+        } else {
+            alert(`Booking failed: ${err.message}`);
+        }
     }
 }
 
-function renderBookings() {
+async function renderBookings() {
     const container = document.getElementById('booking-list');
     container.innerHTML = '';
-    if (globalBookings.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding: 4rem; background: var(--glass-bg); border-radius: 12px; border: 1px solid var(--glass-border-subtle);"><p>No bookings yet.</p></div>`;
+
+    if (!api.isLoggedIn()) {
+        container.innerHTML = `<div style="text-align:center; padding: 4rem; background: var(--glass-bg); border-radius: 12px; border: 1px solid var(--glass-border-subtle);"><p>Please log in to see your bookings.</p></div>`;
         return;
     }
-    [...globalBookings].reverse().forEach(b => {
-        const item = document.createElement('div');
-        item.className = 'booking-item';
-        item.innerHTML = `
-            <div class="b-details">
-                <h4>${b.roomName} <span style="font-weight:400; color:var(--text-muted);">• ${b.location}</span></h4>
-                <p>Date: ${b.date} | Time: ${b.time} - ${b.endTime}</p>
-                <div class="b-id">Ref ID: ${b.id} | User: ${b.studentId}</div>
-            </div>
-            <button class="btn btn-outline-danger" onclick="cancelBooking('${b.id}')">Cancel</button>
-        `;
-        container.appendChild(item);
-    });
+
+    container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem">Loading bookings...</p>';
+
+    try {
+        const { bookings } = await api.getMyBookings();
+
+        if (bookings.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding: 4rem; background: var(--glass-bg); border-radius: 12px; border: 1px solid var(--glass-border-subtle);"><p>No bookings yet.</p></div>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        bookings.forEach(b => {
+            const dateStr = new Date(b.date).toISOString().split('T')[0];
+            const location = `${b.room.building.name}, ${b.room.floor}`;
+            const item = document.createElement('div');
+            item.className = 'booking-item';
+            item.innerHTML = `
+                <div class="b-details">
+                    <h4>${b.room.name} <span style="font-weight:400; color:var(--text-muted);">• ${location}</span></h4>
+                    <p>Date: ${dateStr} | Time: ${b.startTime} - ${b.endTime}</p>
+                    <div class="b-id">Ref ID: ${b.id.slice(0,8).toUpperCase()} | Status: ${b.status}</div>
+                </div>
+                ${b.status === 'CONFIRMED' ? `<button class="btn btn-outline-danger" onclick="cancelBooking('${b.id}')">Cancel</button>` : '<span style="color:var(--text-muted)">' + b.status + '</span>'}
+            `;
+            container.appendChild(item);
+        });
+    } catch (err) {
+        container.innerHTML = `<p style="color:var(--danger);text-align:center;padding:2rem">Error loading bookings: ${err.message}</p>`;
+    }
 }
 
-function cancelBooking(bookingId) {
+async function cancelBooking(bookingId) {
     if (confirm("Cancel this booking?")) {
-        globalBookings = globalBookings.filter(b => b.id !== bookingId);
-        localStorage.setItem('campusGlobalBookingsV4', JSON.stringify(globalBookings));
-        renderBookings();
+        try {
+            await api.cancelBooking(bookingId);
+            renderBookings();
+        } catch (err) {
+            alert(`Failed to cancel: ${err.message}`);
+        }
     }
 }
 

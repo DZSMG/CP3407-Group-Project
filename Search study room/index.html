@@ -106,17 +106,12 @@
 
     <div class="modal-overlay hidden" id="loginModal">
         <div class="modal-container glass-panel">
-            <h3 class="modal-title">Authentication Required</h3>
+            <h3 class="modal-title">Login to Book</h3>
             <div class="form-grid">
-                <div class="form-label">Login as:</div>
-                <div class="radio-group">
-                    <label class="radio-label"><input type="radio" name="userType" value="staff" checked> Staff</label>
-                    <label class="radio-label"><input type="radio" name="userType" value="student"> Existing Student</label>
-                </div>
-                <div class="form-label">Student ID:</div>
-                <input type="text" id="studentId" class="glass-input" placeholder="Enter your ID (Required)">
+                <div class="form-label">Student / Staff ID:</div>
+                <input type="text" id="studentId" class="glass-input" placeholder="e.g. jc100001 or st0001">
                 <div class="form-label">Password:</div>
-                <input type="password" class="glass-input" placeholder="Enter password">
+                <input type="password" id="passwordInput" class="glass-input" placeholder="Enter password">
             </div>
             <div class="modal-footer">
                 <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
@@ -125,6 +120,7 @@
         </div>
     </div>
 
+    <script src="api.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
