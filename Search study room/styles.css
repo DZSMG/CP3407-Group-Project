@@ -1,4 +1,3 @@
-
 :root {
     /* Light Mode - Clean White/Off-White */
     --bg-primary: #fbfbfd;
@@ -781,9 +780,6 @@ Login Modal
         margin-bottom: 4px;
     }
 }
-
-
-
 /* =========================================
 Library Map Layout
 ========================================= */
@@ -808,7 +804,7 @@ Library Map Layout
 .desk-block {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 2px; 
     background: rgba(0, 0, 0, 0.03);
     padding: 8px;
     border-radius: 8px;
