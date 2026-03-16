@@ -1,0 +1,15 @@
+# Claude Code memory
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files
+*.env
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
