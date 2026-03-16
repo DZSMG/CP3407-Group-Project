@@ -5,6 +5,7 @@ import { errorHandler } from './middleware/errorHandler';
 import healthRouter from './routes/health';
 import authRouter from './routes/auth';
 import roomsRouter from './routes/rooms';
+import bookingsRouter from './routes/bookings';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -15,6 +16,7 @@ app.use(express.json());
 app.use('/api', healthRouter);
 app.use('/api/auth', authRouter);
 app.use('/api', roomsRouter);
+app.use('/api/bookings', bookingsRouter);
 
 app.use(errorHandler);
 
