@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  STUDENT
+  STAFF
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  PRE_ARRIVAL
+  SUSPENDED
+}
+
+enum RoomType {
+  CLASSROOM
+  COMPUTER_LAB
+  FINANCE_LAB
+  CONSULTATION
+  LECTURE_THEATRE
+  LIBRARY_SEAT
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model User {
+  id           String      @id @default(uuid())
+  studentId    String      @unique
+  email        String      @unique
+  passwordHash String
+  role         Role        @default(STUDENT)
+  status       UserStatus  @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+  bookings     Booking[]
+}
+
+model Building {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String
+  rooms       Room[]
+}
+
+model Room {
+  id         Int          @id @default(autoincrement())
+  buildingId Int
+  building   Building     @relation(fields: [buildingId], references: [id])
+  name       String
+  floor      String
+  type       RoomType
+  capacity   Int
+  imageUrl   String?
+  isActive   Boolean      @default(true)
+  bookings   Booking[]
+  status     RoomStatus?
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  roomId        Int
+  room          Room          @relation(fields: [roomId], references: [id])
+  date          DateTime
+  startTime     String
+  endTime       String
+  durationHours Int
+  status        BookingStatus @default(CONFIRMED)
+  createdAt     DateTime      @default(now())
+  roomStatus    RoomStatus?
+
+  @@index([roomId, date, status])
+}
+
+model RoomStatus {
+  id               Int       @id @default(autoincrement())
+  roomId           Int       @unique
+  room             Room      @relation(fields: [roomId], references: [id])
+  isOccupied       Boolean   @default(false)
+  currentBookingId String?   @unique
+  currentBooking   Booking?  @relation(fields: [currentBookingId], references: [id])
+  lastUpdated      DateTime  @updatedAt
+}
