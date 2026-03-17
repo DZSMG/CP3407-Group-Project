@@ -13,8 +13,7 @@ The platform's primary goal is to provide a single, easy-to-use online solution 
 The system aims to allow students to:
 *   Book **self-study rooms**.
 *   Reserve **library seats**.
-*   Pre-order **meals** from the campus canteen.
-*   Register for **campus activities**.
+
 
 ## Project Members
 
