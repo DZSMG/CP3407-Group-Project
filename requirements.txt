@@ -1,0 +1,12 @@
+# JCU Campus Booking System -- Python dependencies
+#
+# Install all at once:
+#   pip install -r requirements.txt
+#
+# Or let start.py install them automatically on first run.
+
+# Automated test suite (tests/run_all_tests.py and individual test files)
+requests>=2.28.0
+
+# Demo user Excel export (backend/database/export_users_xlsx.py)
+openpyxl>=3.1.0
