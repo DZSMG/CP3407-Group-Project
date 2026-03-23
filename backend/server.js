@@ -260,6 +260,25 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), rooms: count });
 });
 
+// ===== DEMO PASSWORDS (DEVELOPMENT ONLY) =====
+
+if (process.env.NODE_ENV !== 'production') {
+  const fs = require('fs');
+  app.get('/api/demo-passwords', (_req, res) => {
+    try {
+      const passwords = JSON.parse(
+        fs.readFileSync(path.join(__dirname, 'database/demo_passwords.json'), 'utf-8')
+      );
+      // Return only the first 20 entries to limit exposure even in dev
+      const subset = {};
+      Object.keys(passwords).slice(0, 20).forEach(k => { subset[k] = passwords[k]; });
+      res.json(subset);
+    } catch {
+      res.status(404).json({ error: 'Demo passwords not available' });
+    }
+  });
+}
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

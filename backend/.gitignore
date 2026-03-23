@@ -3,3 +3,8 @@ database/campus_booking.db
 database/campus_booking.db-shm
 database/campus_booking.db-wal
 database/*.bak
+
+# Demo generated files (large, regenerate with generate_demo_users.py)
+database/demo_users_credentials.csv
+database/demo_passwords.json
+database/JCU_Demo_User_Database.xlsx
