@@ -1,0 +1,5 @@
+node_modules/
+database/campus_booking.db
+database/campus_booking.db-shm
+database/campus_booking.db-wal
+database/*.bak

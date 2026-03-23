@@ -32,63 +32,11 @@ const libraryMapData = {
 };
 
 // Global state
-let currentBuilding = null;
+let buildingsData = [];
 let currentBuildingId = null;
+let currentBuildingName = null;
 let currentFloor = null;
 let pendingBooking = null;
-let allBuildingsCache = [];
-
-// WebSocket state
-let socket = null;
-let subscribedFloor = null;
-
-function connectSocket() {
-    if (socket) return;
-    socket = io('http://localhost:3001');
-
-    socket.on('room:statusChange', (data) => {
-        // data = { roomId, isOccupied, currentBookingId }
-        if (currentBuilding === 'Library') {
-            const seatBtn = document.querySelector(`[data-seat-num="${data.roomId}"]`);
-            if (seatBtn) {
-                const isPublic = seatBtn.classList.contains('public');
-                if (!isPublic) {
-                    seatBtn.className = `seat ${data.isOccupied ? 'booked' : 'available'}`;
-                    if (!data.isOccupied) {
-                        const seatId = findLibrarySeatId(parseInt(seatBtn.getAttribute('data-seat-num')));
-                        if (seatId) seatBtn.onclick = () => handleBook(seatId, seatBtn.title.split(' -')[0], 'Library');
-                    } else {
-                        seatBtn.onclick = null;
-                    }
-                }
-            }
-        } else {
-            const card = document.querySelector(`[data-room-id="${data.roomId}"]`);
-            if (card) {
-                const badge = card.querySelector('.status-badge');
-                const btn = card.querySelector('.btn');
-                if (badge) {
-                    badge.className = `status-badge ${data.isOccupied ? 'badge-full' : 'badge-available'}`;
-                    badge.textContent = data.isOccupied ? 'Occupied' : 'Available';
-                }
-                if (btn) {
-                    btn.className = `btn ${data.isOccupied ? 'btn-disabled' : 'btn-primary'}`;
-                    btn.disabled = data.isOccupied;
-                    btn.textContent = data.isOccupied ? 'Unavailable' : 'Book Space';
-                }
-            }
-        }
-    });
-}
-
-function subscribeToFloor(buildingId, floor) {
-    if (!socket) connectSocket();
-    if (subscribedFloor) {
-        socket.emit('unsubscribe:floor', subscribedFloor);
-    }
-    subscribedFloor = { buildingId, floor };
-    socket.emit('subscribe:floor', subscribedFloor);
-}
 
 // Theme Toggle
 const themeToggle = document.getElementById('themeToggle');
@@ -113,30 +61,32 @@ if (themeToggle) {
     });
 }
 
-window.onload = async function() {
+window.onload = function() {
     initTheme();
     document.getElementById('dateInput').valueAsDate = new Date();
-    document.getElementById('timeInput').value = "10:00";
+    document.getElementById('timeInput').value = '10:00';
+    initBuildingSelector();
     updateAuthUI();
-    connectSocket();
-    await initBuildingSelector();
 };
 
 function updateAuthUI() {
-    const user = api.getUser();
     const loginBtn = document.querySelector('.btn-login-header');
-    if (user && api.isLoggedIn()) {
-        loginBtn.textContent = `${user.studentId} ▾`;
+    if (api.isLoggedIn()) {
+        const user = api.getCurrentUser();
+        loginBtn.textContent = user ? user.studentId + ' \u25be' : 'Logged In';
         loginBtn.onclick = () => {
             if (confirm('Log out?')) {
                 api.clearToken();
                 updateAuthUI();
+                if (!document.getElementById('bookings-view').classList.contains('hidden')) {
+                    switchView('home');
+                }
                 renderBookings();
             }
         };
     } else {
         loginBtn.textContent = 'Log In';
-        loginBtn.onclick = openModal;
+        loginBtn.onclick = () => document.getElementById('loginModal').classList.remove('hidden');
     }
 }
 
@@ -144,52 +94,66 @@ function openModal() {
     document.getElementById('loginModal').classList.remove('hidden');
 }
 
+function closeModal() {
+    document.getElementById('loginModal').classList.add('hidden');
+    pendingBooking = null;
+}
+
 // Building selector — loads from API
 async function initBuildingSelector() {
     const container = document.getElementById('building-container');
     container.innerHTML = '<p style="color:var(--text-muted)">Loading...</p>';
     try {
-        const { buildings } = await api.getBuildings();
-        allBuildingsCache = buildings;
+        const data = await api.getBuildings();
+        buildingsData = data;
         container.innerHTML = '';
-        buildings.forEach(bldg => {
+        data.forEach(bldg => {
             const card = document.createElement('div');
             card.className = 'select-card';
-            card.innerHTML = `<h3>${bldg.name}</h3><p>${bldg.description}</p>`;
-            card.onclick = () => selectBuilding(bldg, card);
+            card.innerHTML = '<h3>' + bldg.name + '</h3><p>' + bldg.description + '</p>';
+            card.onclick = () => selectBuilding(bldg.id, bldg.name, card);
             container.appendChild(card);
         });
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--danger)">Failed to load buildings: ${err.message}</p>`;
+        console.error('Failed to load buildings:', err);
+        container.innerHTML = '<p style="color:var(--danger)">Failed to connect to server. Make sure the backend is running on port 3001.</p>';
     }
 }
 
-async function selectBuilding(bldg, cardElement) {
-    currentBuilding = bldg.name;
-    currentBuildingId = bldg.id;
+function selectBuilding(buildingId, buildingName, cardElement) {
+    currentBuildingId = buildingId;
+    currentBuildingName = buildingName;
     currentFloor = null;
     document.querySelectorAll('#building-container .select-card').forEach(el => el.classList.remove('active'));
     cardElement.classList.add('active');
     document.getElementById('step3-section').classList.add('hidden');
     document.getElementById('step2-section').classList.remove('hidden');
 
-    // Load floors from rooms API
     const container = document.getElementById('floor-container');
-    container.innerHTML = '<span style="color:var(--text-muted)">Loading floors...</span>';
-    try {
-        const { rooms } = await api.getRooms(bldg.id);
-        const floors = [...new Set(rooms.map(r => r.floor))].sort();
-        container.innerHTML = '';
-        floors.forEach(floor => {
-            const pill = document.createElement('button');
-            pill.className = 'pill';
-            pill.innerText = floor;
-            pill.onclick = () => selectFloor(floor, pill);
-            container.appendChild(pill);
-        });
-    } catch (err) {
-        container.innerHTML = `<span style="color:var(--danger)">Error: ${err.message}</span>`;
+    container.innerHTML = '';
+
+    let floors;
+    if (buildingName === 'Library') {
+        floors = ['Level 1', 'Level 2'];
+    } else if (buildingName === 'Block A') {
+        floors = ['Level 1', 'Level 2'];
+    } else if (buildingName === 'Block B') {
+        floors = ['Level 2', 'Level 3'];
+    } else if (buildingName === 'Block C') {
+        floors = ['Level 1', 'Level 2', 'Level 3', 'Level 4'];
+    } else if (buildingName === 'Block E') {
+        floors = ['Level 2'];
+    } else {
+        floors = ['Level 1'];
     }
+
+    floors.forEach(floor => {
+        const pill = document.createElement('button');
+        pill.className = 'pill';
+        pill.innerText = floor;
+        pill.onclick = () => selectFloor(floor, pill);
+        container.appendChild(pill);
+    });
 }
 
 function selectFloor(floorName, pillElement) {
@@ -197,18 +161,17 @@ function selectFloor(floorName, pillElement) {
     document.querySelectorAll('#floor-container .pill').forEach(el => el.classList.remove('active'));
     pillElement.classList.add('active');
     document.getElementById('step3-section').classList.remove('hidden');
-    subscribeToFloor(currentBuildingId, currentFloor);
     renderRooms();
 }
 
 async function renderRooms() {
-    if (!currentBuilding || !currentFloor) return;
+    if (!currentBuildingId || !currentFloor) return;
 
     const targetDate = document.getElementById('dateInput').value;
     const targetTime = document.getElementById('timeInput').value;
-    const duration = parseInt(document.getElementById('durationInput').value);
+    const duration = document.getElementById('durationInput').value;
 
-    if (currentBuilding === 'Library') {
+    if (currentBuildingName === 'Library') {
         document.getElementById('typeFilterContainer').style.display = 'none';
         document.getElementById('room-grid').classList.add('hidden');
         document.getElementById('library-map-section').classList.remove('hidden');
@@ -220,48 +183,56 @@ async function renderRooms() {
     document.getElementById('room-grid').classList.remove('hidden');
     document.getElementById('library-map-section').classList.add('hidden');
 
-    const typeFilter = document.getElementById('typeFilter').value;
-    const container = document.getElementById('room-grid');
-    container.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:2rem">Loading rooms...</p>';
-
     try {
-        const { rooms } = await api.getFloorAvailability(currentBuildingId, currentFloor, targetDate, targetTime, duration);
+        let rooms = await api.getRoomsAvailability(currentBuildingId, currentFloor, targetDate, targetTime, duration);
 
-        const filteredRooms = typeFilter === 'All'
-            ? rooms
-            : rooms.filter(r => r.room.type === typeFilter.toUpperCase().replace(/ /g, '_'));
+        const typeFilter = document.getElementById('typeFilter').value;
+        if (typeFilter !== 'All') {
+            rooms = rooms.filter(r => r.room_type === typeFilter);
+        }
 
-        document.getElementById('result-count').innerText = `${filteredRooms.length} Spaces Found`;
+        const container = document.getElementById('room-grid');
         container.innerHTML = '';
+        document.getElementById('result-count').innerText = rooms.length + ' Spaces Found';
 
-        if (filteredRooms.length === 0) {
-            container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">No spaces match criteria.</div>`;
+        if (rooms.length === 0) {
+            container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted);">No spaces match criteria.</div>';
             return;
         }
 
-        filteredRooms.forEach(({ room, isAvailable }, idx) => {
-            const typeLabel = room.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const typeImages = {
+            'Classroom': 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=500&auto=format&fit=crop&q=60',
+            'Computer Lab': 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=500&auto=format&fit=crop&q=60',
+            'Finance Lab': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&auto=format&fit=crop&q=60',
+            'Consultation Room': 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=500&auto=format&fit=crop&q=60',
+            'Lecture Theatre': 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=500&auto=format&fit=crop&q=60',
+        };
+
+        rooms.forEach((room, idx) => {
             const card = document.createElement('div');
             card.className = 'room-card';
+            card.style.animationDelay = idx * 0.05 + 's';
             card.setAttribute('data-room-id', room.id);
-            card.style.animationDelay = `${idx * 0.05}s`;
-            card.innerHTML = `
-                <div class="room-img-container">
-                    <span class="status-badge ${isAvailable ? 'badge-available' : 'badge-full'}">${isAvailable ? 'Available' : 'Taken'}</span>
-                    ${room.imageUrl ? `<img src="${room.imageUrl}" alt="">` : ''}
-                </div>
-                <div class="room-info">
-                    <h3 class="room-title">${room.name}</h3>
-                    <div class="room-type">${typeLabel}</div>
-                    <div class="room-meta"><div class="meta-item">Cap: ${room.capacity}</div><div class="meta-item">${room.building.name}</div></div>
-                    <button class="btn ${isAvailable ? 'btn-primary' : 'btn-disabled'}" ${!isAvailable ? 'disabled' : ''}
-                        onclick="handleBook(${room.id}, '${room.name}', '${room.building.name}')">${isAvailable ? 'Book Space' : 'Unavailable'}</button>
-                </div>
-            `;
+            const img = typeImages[room.room_type] || '';
+            card.innerHTML =
+                '<div class="room-img-container">' +
+                    '<span class="status-badge ' + (room.isAvailable ? 'badge-available' : 'badge-full') + '">' + (room.isAvailable ? 'Available' : 'Taken') + '</span>' +
+                    (img ? '<img src="' + img + '" alt="">' : '') +
+                '</div>' +
+                '<div class="room-info">' +
+                    '<h3 class="room-title">' + room.room_id + '</h3>' +
+                    '<div class="room-type">' + room.room_type + '</div>' +
+                    '<div class="room-meta"><div class="meta-item">Cap: ' + room.capacity + '</div><div class="meta-item">' + currentBuildingName + '</div></div>' +
+                    '<button class="btn ' + (room.isAvailable ? 'btn-primary' : 'btn-disabled') + '" ' + (!room.isAvailable ? 'disabled' : '') +
+                    ' onclick="handleBook(' + room.id + ',\'' + room.room_id + '\',\'' + currentBuildingName + '\')">' +
+                    (room.isAvailable ? 'Book Space' : 'Unavailable') + '</button>' +
+                '</div>';
             container.appendChild(card);
         });
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--danger);grid-column:1/-1;text-align:center;padding:2rem">Error: ${err.message}</p>`;
+        console.error('Failed to load rooms:', err);
+        const container = document.getElementById('room-grid');
+        container.innerHTML = '<p style="color:var(--danger);grid-column:1/-1;text-align:center;padding:2rem">Error: ' + err.message + '</p>';
     }
 }
 
@@ -271,18 +242,16 @@ async function renderLibraryMap(date, time, duration) {
     const floorData = libraryMapData[currentFloor];
     if (!floorData) return;
 
-    // Fetch availability from API
-    let availabilityMap = {};
+    let roomAvailability = {};
     try {
-        const { rooms } = await api.getFloorAvailability(currentBuildingId, currentFloor, date, time, duration);
-        rooms.forEach(({ room, isAvailable }) => {
-            // Extract seat number from name e.g. "Lib-L1-5" -> 5
-            const match = room.name.match(/\d+$/);
-            if (match) availabilityMap[parseInt(match[0])] = isAvailable;
+        const rooms = await api.getRoomsAvailability(currentBuildingId, currentFloor, date, time, duration);
+        rooms.forEach(r => {
+            const parts = r.room_id.split('-');
+            const seatNum = parseInt(parts[parts.length - 1]);
+            roomAvailability[seatNum] = { dbId: r.id, isAvailable: r.isAvailable, roomId: r.room_id };
         });
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--danger)">Error loading seats: ${err.message}</p>`;
-        return;
+        console.error('Failed to load library availability:', err);
     }
 
     let totalSeats = 0;
@@ -302,20 +271,18 @@ async function renderLibraryMap(date, time, duration) {
                 row.forEach(seatNum => {
                     totalSeats++;
                     const isPublic = floorData.unbookable.includes(seatNum);
-                    const levelPrefix = currentFloor === 'Level 1' ? 'L1' : 'L2';
-                    const seatName = `${levelPrefix}-${seatNum}`;
-                    const isAvail = availabilityMap[seatNum] !== undefined ? availabilityMap[seatNum] : true;
+                    const seatInfo = roomAvailability[seatNum];
+                    const isAvail = seatInfo ? seatInfo.isAvailable : false;
+                    const seatName = (currentFloor === 'Level 1' ? 'L1' : 'L2') + '-Seat-' + seatNum;
 
                     const btn = document.createElement('button');
-                    btn.className = `seat ${isPublic ? 'public' : (isAvail ? 'available' : 'booked')}`;
+                    btn.className = 'seat ' + (isPublic ? 'public' : (isAvail ? 'available' : 'booked'));
                     btn.innerText = seatNum;
-                    btn.setAttribute('data-seat-num', seatNum);
-                    btn.title = isPublic ? `${seatName} (Public/No Booking)` : `${seatName} - Click to book`;
+                    btn.title = isPublic ? seatName + ' (Public/No Booking)' : seatName;
+                    btn.setAttribute('data-seat-id', seatInfo ? seatInfo.dbId : '');
 
-                    if (!isPublic && isAvail) {
-                        // Find the room id from the API response
-                        const seatId = findLibrarySeatId(seatNum);
-                        if (seatId) btn.onclick = () => handleBook(seatId, seatName, 'Library');
+                    if (!isPublic && isAvail && seatInfo) {
+                        btn.onclick = () => handleBook(seatInfo.dbId, seatInfo.roomId, 'Library');
                     }
                     rowDiv.appendChild(btn);
                 });
@@ -332,80 +299,68 @@ async function renderLibraryMap(date, time, duration) {
     corridor.innerHTML = 'CORRIDOR';
     mapWrapper.appendChild(corridor);
     mapWrapper.appendChild(createSide(floorData.right));
-
     container.appendChild(mapWrapper);
-    document.getElementById('result-count').innerText = `${totalSeats} Seats Found`;
-
-    // Store availability for seat ID lookup
-    window._libraryRoomsCache = {};
-    try {
-        const { rooms } = await api.getFloorAvailability(currentBuildingId, currentFloor, date, time, duration);
-        rooms.forEach(({ room }) => {
-            const match = room.name.match(/\d+$/);
-            if (match) window._libraryRoomsCache[parseInt(match[0])] = room.id;
-        });
-    } catch (_) {}
-}
-
-function findLibrarySeatId(seatNum) {
-    return window._libraryRoomsCache ? window._libraryRoomsCache[seatNum] : null;
+    document.getElementById('result-count').innerText = totalSeats + ' Seats Found';
 }
 
 function handleBook(roomId, roomName, building) {
     const date = document.getElementById('dateInput').value;
     const time = document.getElementById('timeInput').value;
-    const duration = parseInt(document.getElementById('durationInput').value);
-    if (!date || !time) return alert("Please select a valid date and time.");
+    const duration = document.getElementById('durationInput').value;
+    if (!date || !time) return alert('Please select a valid date and time.');
+    pendingBooking = { roomId, roomName, building, date, time, duration };
 
-    pendingBooking = { roomId, roomName, building, date, startTime: time, durationHours: duration };
-    document.getElementById('loginModal').classList.remove('hidden');
-}
-
-function closeModal() {
-    document.getElementById('loginModal').classList.add('hidden');
-    pendingBooking = null;
+    if (api.isLoggedIn()) {
+        processBooking();
+    } else {
+        document.getElementById('loginModal').classList.remove('hidden');
+    }
 }
 
 async function processLogin() {
     const studentId = document.getElementById('studentId').value.trim();
-    const password = document.getElementById('passwordInput')?.value || '';
-
-    if (!studentId) {
-        alert("Student ID is required.");
-        return;
-    }
+    const password = document.getElementById('passwordInput') ? document.getElementById('passwordInput').value : document.querySelector('#loginModal input[type="password"]').value;
+    if (!studentId) return alert('Student ID is required.');
+    if (!password) return alert('Password is required.');
 
     try {
-        // Login if not already logged in
-        if (!api.isLoggedIn()) {
-            const { token, user } = await api.login(studentId, password);
-            api.setToken(token);
-            api.setUser(user);
-            updateAuthUI();
-        }
-
+        await api.login(studentId, password);
+        updateAuthUI();
+        document.getElementById('loginModal').classList.add('hidden');
         if (pendingBooking) {
-            const { roomId, roomName, building, date, startTime, durationHours } = pendingBooking;
-            const { booking } = await api.createBooking(roomId, date, startTime, durationHours);
-
-            const endTime = booking.endTime;
-            alert(`Booking Confirmed!\nSpace: ${roomName} (${building})\nTime: ${date} | ${startTime} - ${endTime}`);
-            closeModal();
-            switchView('bookings');
+            await processBooking();
         }
     } catch (err) {
-        if (err.status === 409) {
-            alert('This time slot was just taken by someone else. Please choose a different time.');
-            closeModal();
-            renderRooms();
-        } else if (err.status === 429) {
-            alert('Library booking limit reached: you can only book 3 library seats per week.');
-            closeModal();
-        } else if (err.status === 401) {
-            alert('Invalid student ID or password. Please try again.');
+        if (err.status === 401) {
+            alert('Invalid student ID or password.');
         } else {
-            alert(`Booking failed: ${err.message}`);
+            alert('Login failed: ' + err.message);
         }
+    }
+}
+
+async function processBooking() {
+    if (!pendingBooking) return;
+    const { roomId, roomName, building, date, time, duration } = pendingBooking;
+
+    try {
+        const booking = await api.createBooking(roomId, date, time, parseInt(duration));
+        alert('Booking Confirmed!\nSpace: ' + roomName + ' (' + building + ')\nTime: ' + date + ' | ' + booking.start_time + ' - ' + booking.end_time + '\nRef: ' + booking.booking_ref);
+        pendingBooking = null;
+        switchView('bookings');
+    } catch (err) {
+        if (err.status === 409) {
+            alert('This time slot was just booked by someone else.');
+        } else if (err.status === 429) {
+            alert('Library weekly quota reached (max 3 per week).');
+        } else if (err.status === 401) {
+            alert('Please log in to make a booking.');
+            document.getElementById('loginModal').classList.remove('hidden');
+        } else {
+            alert('Booking failed: ' + err.message);
+        }
+        pendingBooking = null;
+        renderRooms();
     }
 }
 
@@ -414,49 +369,46 @@ async function renderBookings() {
     container.innerHTML = '';
 
     if (!api.isLoggedIn()) {
-        container.innerHTML = `<div style="text-align:center; padding: 4rem; background: var(--glass-bg); border-radius: 12px; border: 1px solid var(--glass-border-subtle);"><p>Please log in to see your bookings.</p></div>`;
+        container.innerHTML = '<div style="text-align:center;padding:4rem;background:var(--glass-bg);border-radius:12px;border:1px solid var(--glass-border-subtle);"><p>Please log in to see your bookings.</p><button class="btn btn-primary" style="width:auto;padding:10px 24px;margin-top:1rem;" onclick="document.getElementById(\'loginModal\').classList.remove(\'hidden\')">Log In</button></div>';
         return;
     }
 
     container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem">Loading bookings...</p>';
 
     try {
-        const { bookings } = await api.getMyBookings();
+        const bookings = await api.getMyBookings();
 
         if (bookings.length === 0) {
-            container.innerHTML = `<div style="text-align:center; padding: 4rem; background: var(--glass-bg); border-radius: 12px; border: 1px solid var(--glass-border-subtle);"><p>No bookings yet.</p></div>`;
+            container.innerHTML = '<div style="text-align:center;padding:4rem;background:var(--glass-bg);border-radius:12px;border:1px solid var(--glass-border-subtle);"><p>No bookings yet.</p><button class="btn btn-primary" style="width:auto;padding:10px 24px;margin-top:1rem;" onclick="switchView(\'home\')">Find a Space</button></div>';
             return;
         }
 
         container.innerHTML = '';
         bookings.forEach(b => {
-            const dateStr = new Date(b.date).toISOString().split('T')[0];
-            const location = `${b.room.building.name}, ${b.room.floor}`;
             const item = document.createElement('div');
             item.className = 'booking-item';
-            item.innerHTML = `
-                <div class="b-details">
-                    <h4>${b.room.name} <span style="font-weight:400; color:var(--text-muted);">• ${location}</span></h4>
-                    <p>Date: ${dateStr} | Time: ${b.startTime} - ${b.endTime}</p>
-                    <div class="b-id">Ref ID: ${b.id.slice(0,8).toUpperCase()} | Status: ${b.status}</div>
-                </div>
-                ${b.status === 'CONFIRMED' ? `<button class="btn btn-outline-danger" onclick="cancelBooking('${b.id}')">Cancel</button>` : '<span style="color:var(--text-muted)">' + b.status + '</span>'}
-            `;
+            item.innerHTML =
+                '<div class="b-details">' +
+                    '<h4>' + b.room_name + ' <span style="font-weight:400;color:var(--text-muted);">\u2022 ' + b.building_name + ', ' + b.level + '</span></h4>' +
+                    '<p>Date: ' + b.booking_date + ' | Time: ' + b.start_time + ' - ' + b.end_time + '</p>' +
+                    '<div class="b-id">Ref: ' + b.booking_ref + ' | Status: ' + b.status + '</div>' +
+                '</div>' +
+                (b.status === 'confirmed' ? '<button class="btn btn-outline-danger" onclick="cancelBooking(' + b.id + ')">Cancel</button>' : '<span style="color:var(--text-muted);font-size:0.85rem;">' + b.status + '</span>');
             container.appendChild(item);
         });
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--danger);text-align:center;padding:2rem">Error loading bookings: ${err.message}</p>`;
+        console.error('Failed to load bookings:', err);
+        container.innerHTML = '<p style="color:var(--danger);text-align:center;padding:2rem">Failed to load bookings.</p>';
     }
 }
 
 async function cancelBooking(bookingId) {
-    if (confirm("Cancel this booking?")) {
-        try {
-            await api.cancelBooking(bookingId);
-            renderBookings();
-        } catch (err) {
-            alert(`Failed to cancel: ${err.message}`);
-        }
+    if (!confirm('Cancel this booking?')) return;
+    try {
+        await api.cancelBooking(bookingId);
+        renderBookings();
+    } catch (err) {
+        alert('Failed to cancel: ' + err.message);
     }
 }
 
@@ -466,5 +418,5 @@ function switchView(viewName) {
     document.getElementById('nav-home').classList.toggle('active', viewName === 'home');
     document.getElementById('nav-bookings').classList.toggle('active', viewName === 'bookings');
     if (viewName === 'bookings') renderBookings();
-    else if (viewName === 'home') { if (currentBuilding && currentFloor) renderRooms(); }
+    else if (viewName === 'home') { if (currentBuildingId && currentFloor) renderRooms(); }
 }

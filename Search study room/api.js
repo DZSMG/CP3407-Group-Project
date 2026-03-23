@@ -1,95 +1,82 @@
 const API_BASE = 'http://localhost:3001/api';
-let authToken = sessionStorage.getItem('authToken');
 
 const api = {
+  _token: sessionStorage.getItem('authToken'),
+
+  _headers() {
+    const h = { 'Content-Type': 'application/json' };
+    if (this._token) h['Authorization'] = 'Bearer ' + this._token;
+    return h;
+  },
+
   setToken(token) {
-    authToken = token;
+    this._token = token;
     sessionStorage.setItem('authToken', token);
   },
 
   clearToken() {
-    authToken = null;
+    this._token = null;
     sessionStorage.removeItem('authToken');
-    sessionStorage.removeItem('authUser');
+    sessionStorage.removeItem('currentUser');
   },
 
-  isLoggedIn() {
-    return !!authToken;
-  },
+  isLoggedIn() { return !!this._token; },
 
-  getUser() {
-    const u = sessionStorage.getItem('authUser');
+  getCurrentUser() {
+    const u = sessionStorage.getItem('currentUser');
     return u ? JSON.parse(u) : null;
   },
 
-  setUser(user) {
-    sessionStorage.setItem('authUser', JSON.stringify(user));
+  setCurrentUser(user) {
+    sessionStorage.setItem('currentUser', JSON.stringify(user));
   },
 
-  async request(method, path, body = null) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-    const res = await fetch(API_BASE + path, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : null,
-    });
-    const data = await res.json();
-    if (!res.ok) throw { status: res.status, message: data.message || 'Request failed' };
-    return data;
+  async request(method, path, body) {
+    try {
+      const opts = { method, headers: this._headers() };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(API_BASE + path, opts);
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 401) { this.clearToken(); }
+        throw { status: res.status, message: data.error || 'Request failed', data };
+      }
+      return data;
+    } catch (err) {
+      if (err.status) throw err;
+      throw { status: 0, message: 'Network error — is the server running?' };
+    }
   },
 
   // Auth
-  login(studentId, password) {
-    return this.request('POST', '/auth/login', { studentId, password });
+  async login(studentId, password) {
+    const data = await this.request('POST', '/auth/login', { studentId, password });
+    this.setToken(data.token);
+    this.setCurrentUser(data.user);
+    return data;
   },
 
-  register(studentId, email, password) {
-    return this.request('POST', '/auth/register', { studentId, email, password });
+  async register(studentId, email, password) {
+    const data = await this.request('POST', '/auth/register', { studentId, email, password });
+    this.setToken(data.token);
+    this.setCurrentUser(data.user);
+    return data;
   },
 
-  getProfile() {
-    return this.request('GET', '/auth/me');
-  },
+  // Buildings & Rooms
+  getBuildings() { return this.request('GET', '/buildings'); },
 
-  // Rooms
-  getBuildings() {
-    return this.request('GET', '/buildings');
-  },
-
-  getRooms(buildingId, floor, type) {
-    const params = new URLSearchParams({ buildingId });
-    if (floor) params.append('floor', floor);
-    if (type && type !== 'All') params.append('type', type);
-    return this.request('GET', '/rooms?' + params);
-  },
-
-  getFloorAvailability(buildingId, floor, date, startTime, durationHours) {
-    const params = new URLSearchParams({
-      buildingId: String(buildingId),
-      floor,
-      date,
-      startTime,
-      durationHours: String(durationHours),
-    });
-    return this.request('GET', '/rooms/floor-availability?' + params);
-  },
-
-  getRoomAvailability(roomId, date, startTime, durationHours) {
-    const params = new URLSearchParams({ date, startTime, durationHours: String(durationHours) });
-    return this.request('GET', `/rooms/${roomId}/availability?` + params);
+  getRoomsAvailability(buildingId, level, date, startTime, duration) {
+    const params = new URLSearchParams({ buildingId, level, date, startTime, duration });
+    return this.request('GET', '/rooms/availability?' + params);
   },
 
   // Bookings
-  createBooking(roomId, date, startTime, durationHours) {
-    return this.request('POST', '/bookings', { roomId, date, startTime, durationHours });
+  createBooking(roomId, date, startTime, durationHours, title, remarks) {
+    return this.request('POST', '/bookings', { roomId, date, startTime, durationHours, title, remarks });
   },
 
-  getMyBookings() {
-    return this.request('GET', '/bookings/me');
-  },
+  getMyBookings() { return this.request('GET', '/bookings/me'); },
 
-  cancelBooking(id) {
-    return this.request('PATCH', `/bookings/${id}/cancel`);
-  },
+  cancelBooking(id) { return this.request('PATCH', '/bookings/' + id + '/cancel'); },
 };

@@ -76,7 +76,7 @@
                             <option value="Classroom">Classroom</option>
                             <option value="Computer Lab">Computer Lab</option>
                             <option value="Finance Lab">Finance Lab</option>
-                            <option value="Consultation room">Consultation Room</option>
+                            <option value="Consultation Room">Consultation Room</option>
                             <option value="Lecture Theatre">Lecture Theatre</option>
                         </select>
                     </div>
@@ -109,9 +109,9 @@
             <h3 class="modal-title">Login to Book</h3>
             <div class="form-grid">
                 <div class="form-label">Student / Staff ID:</div>
-                <input type="text" id="studentId" class="glass-input" placeholder="e.g. jc100001 or st0001">
+                <input type="text" id="studentId" class="glass-input" placeholder="e.g. 14123456" maxlength="8">
                 <div class="form-label">Password:</div>
-                <input type="password" id="passwordInput" class="glass-input" placeholder="Enter password">
+                <input type="password" id="passwordInput" class="glass-input" placeholder="Default: ddmmyyyy (birth date)" maxlength="8">
             </div>
             <div class="modal-footer">
                 <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
@@ -120,7 +120,6 @@
         </div>
     </div>
 
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script src="api.js"></script>
     <script src="script.js"></script>
 </body>
