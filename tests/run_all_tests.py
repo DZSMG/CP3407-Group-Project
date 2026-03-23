@@ -10,7 +10,9 @@ Usage:
 
 import sys
 import os
+import json
 import time
+from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -45,13 +47,14 @@ def main():
         (live_tests,    "US-13..15  Library Quota & Live Status"),
     ]
 
-    results = []
+    suite_results = []
     total_passed = 0
     total_failed = 0
+    run_ts = datetime.now().isoformat()
 
     for module, label in suites:
         p, f, dur = run_suite(module, label)
-        results.append((label, p, f, dur))
+        suite_results.append((label, p, f, dur))
         total_passed += p
         total_failed += f
 
@@ -61,7 +64,7 @@ def main():
     print("="*70)
     print(f"  {'Suite':<35} {'Passed':>6}  {'Failed':>6}  {'Time':>6}")
     print(f"  {'-'*35}  {'-'*6}  {'-'*6}  {'-'*6}")
-    for label, p, f, dur in results:
+    for label, p, f, dur in suite_results:
         status = "OK" if f == 0 else "FAIL"
         print(f"  {label:<35} {p:>6}  {f:>6}  {dur:>5.1f}s  [{status}]")
     print(f"  {'-'*35}  {'-'*6}  {'-'*6}")
@@ -70,6 +73,27 @@ def main():
 
     overall = "ALL TESTS PASSED" if total_failed == 0 else f"{total_failed} TEST(S) FAILED"
     print(f"\n  Result: {overall}\n")
+
+    # Write combined summary JSON report
+    reports_dir = os.path.join(os.path.dirname(__file__), "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    summary = {
+        "suite": "Full Test Suite",
+        "file": "report_summary.json",
+        "timestamp": run_ts,
+        "passed": total_passed,
+        "failed": total_failed,
+        "total": total_passed + total_failed,
+        "result": "PASSED" if total_failed == 0 else "FAILED",
+        "suites": [
+            {"label": label, "passed": p, "failed": f, "duration_s": round(dur, 2)}
+            for label, p, f, dur in suite_results
+        ],
+    }
+    summary_path = os.path.join(reports_dir, "report_summary.json")
+    with open(summary_path, "w", encoding="utf-8") as fh:
+        json.dump(summary, fh, indent=2)
+    print(f"  JSON summary: {summary_path}\n")
 
     sys.exit(0 if total_failed == 0 else 1)
 

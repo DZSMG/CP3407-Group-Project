@@ -10,22 +10,34 @@ import os
 import json
 
 sys.path.insert(0, os.path.dirname(__file__))
-from conftest import APIClient, get_future_date, get_today
+from conftest import APIClient, get_future_date, get_today, write_json_report
 from config import (BASE_URL, TEST_STUDENT_1, TEST_STUDENT_2, TEST_ADMIN,
                     NEW_STUDENT)
 
 passed = 0
 failed = 0
+results = []
 
 
 def report(test_id, test_name, method, url, body, expected,
            actual_status, actual_body, condition):
-    global passed, failed
+    global passed, failed, results
     verdict = "PASS" if condition else "FAIL"
     if condition:
         passed += 1
     else:
         failed += 1
+    results.append({
+        "id": test_id,
+        "name": test_name,
+        "method": method,
+        "url": url,
+        "body": body,
+        "expected": expected,
+        "actual_status": actual_status,
+        "actual_body": actual_body,
+        "passed": bool(condition),
+    })
 
     print(f"\n{'='*70}")
     print(f"  {test_id}: {test_name}")
@@ -47,9 +59,10 @@ def report(test_id, test_name, method, url, body, expected,
 
 
 def run_tests():
-    global passed, failed
+    global passed, failed, results
     passed = 0
     failed = 0
+    results = []
     client = APIClient()
 
     print("\n" + "#"*70)
@@ -243,6 +256,12 @@ def run_tests():
     print(f"  AUTHENTICATION TESTS COMPLETE: {passed} passed, {failed} failed "
           f"out of {passed + failed}")
     print(f"{'='*70}\n")
+    path = write_json_report(
+        "US-01 to US-04: Authentication",
+        "report_US01_US04_authentication.json",
+        results, passed, failed,
+    )
+    print(f"  JSON report: {path}")
     return failed == 0
 
 

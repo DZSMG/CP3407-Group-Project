@@ -10,22 +10,34 @@ import os
 import json
 
 sys.path.insert(0, os.path.dirname(__file__))
-from conftest import APIClient, get_future_date
+from conftest import APIClient, get_future_date, write_json_report
 from config import (LIBRARY_ID, LIBRARY_L1_SEAT_START, LIBRARY_L2_SEAT_START,
                     LEVEL_1, LEVEL_2)
 
 passed = 0
 failed = 0
+results = []
 
 
 def report(test_id, test_name, method, url, body, expected,
            actual_status, actual_body, condition):
-    global passed, failed
+    global passed, failed, results
     verdict = "PASS" if condition else "FAIL"
     if condition:
         passed += 1
     else:
         failed += 1
+    results.append({
+        "id": test_id,
+        "name": test_name,
+        "method": method,
+        "url": url,
+        "body": body,
+        "expected": expected,
+        "actual_status": actual_status,
+        "actual_body": actual_body,
+        "passed": bool(condition),
+    })
 
     print(f"\n{'='*70}")
     print(f"  {test_id}: {test_name}")
@@ -44,9 +56,10 @@ def report(test_id, test_name, method, url, body, expected,
 
 
 def run_tests():
-    global passed, failed
+    global passed, failed, results
     passed = 0
     failed = 0
+    results = []
 
     print("\n" + "#"*70)
     print("#  US-13 through US-15: LIBRARY QUOTA & LIVE STATUS TESTS")
@@ -249,6 +262,12 @@ def run_tests():
     print(f"  LIBRARY QUOTA & LIVE STATUS TESTS COMPLETE: {passed} passed, {failed} failed "
           f"out of {passed + failed}")
     print(f"{'='*70}\n")
+    path = write_json_report(
+        "US-13 to US-15: Library Quota & Live Status",
+        "report_US13_US15_live_status.json",
+        results, passed, failed,
+    )
+    print(f"  JSON report: {path}")
     return failed == 0
 
 

@@ -1,6 +1,7 @@
 import requests
 import sys
 import os
+import json
 from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -55,3 +56,22 @@ def get_future_date(days_ahead=1):
 
 def get_today():
     return datetime.now().strftime("%Y-%m-%d")
+
+
+def write_json_report(suite_name, filename, results, passed, failed):
+    """Write a structured JSON test report to tests/reports/<filename>."""
+    reports_dir = os.path.join(os.path.dirname(__file__), "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    report = {
+        "suite": suite_name,
+        "file": filename,
+        "timestamp": datetime.now().isoformat(),
+        "passed": passed,
+        "failed": failed,
+        "total": passed + failed,
+        "tests": results,
+    }
+    out_path = os.path.join(reports_dir, filename)
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2, default=str)
+    return out_path

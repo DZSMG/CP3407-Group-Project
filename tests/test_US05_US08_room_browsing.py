@@ -11,23 +11,35 @@ import os
 import json
 
 sys.path.insert(0, os.path.dirname(__file__))
-from conftest import APIClient, get_future_date
+from conftest import APIClient, get_future_date, write_json_report
 from config import (BASE_URL, BLOCK_A_ID, BLOCK_A_NAME, BLOCK_B_ID, BLOCK_C_ID,
                     BLOCK_E_ID, LIBRARY_ID, LEVEL_1, LEVEL_2,
                     ROOM_A1_04_ID, ROOM_C1_10_ID)
 
 passed = 0
 failed = 0
+results = []
 
 
 def report(test_id, test_name, method, url, body, expected,
            actual_status, actual_body, condition):
-    global passed, failed
+    global passed, failed, results
     verdict = "PASS" if condition else "FAIL"
     if condition:
         passed += 1
     else:
         failed += 1
+    results.append({
+        "id": test_id,
+        "name": test_name,
+        "method": method,
+        "url": url,
+        "body": body,
+        "expected": expected,
+        "actual_status": actual_status,
+        "actual_body": actual_body,
+        "passed": bool(condition),
+    })
 
     print(f"\n{'='*70}")
     print(f"  {test_id}: {test_name}")
@@ -47,9 +59,10 @@ def report(test_id, test_name, method, url, body, expected,
 
 
 def run_tests():
-    global passed, failed
+    global passed, failed, results
     passed = 0
     failed = 0
+    results = []
     client = APIClient()
     date = get_future_date(1)
 
@@ -259,6 +272,12 @@ def run_tests():
     print(f"  ROOM BROWSING TESTS COMPLETE: {passed} passed, {failed} failed "
           f"out of {passed + failed}")
     print(f"{'='*70}\n")
+    path = write_json_report(
+        "US-05 to US-08: Room Browsing",
+        "report_US05_US08_room_browsing.json",
+        results, passed, failed,
+    )
+    print(f"  JSON report: {path}")
     return failed == 0
 
 
