@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JCU Booking System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    
+    <header class="glass-header">
+        <div class="logo">
+            <h1>JCU Booking System</h1>
+        </div>
+        <nav>
+            <div class="nav-links">
+                <a href="#" id="nav-home" class="active" onclick="switchView('home'); return false;">Find Space</a>
+                <a href="#" id="nav-bookings" onclick="switchView('bookings'); return false;">My Bookings</a>
+            </div>
+            <div class="nav-actions">
+                <button class="btn-icon" id="themeToggle" title="Toggle Theme">
+                    <svg id="moonIcon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                    <svg id="sunIcon" style="display:none;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+                </button>
+                <span id="userInfo" class="hidden" style="font-size: 0.85rem; color: var(--text-secondary); margin-right: 8px;"></span>
+                <button class="btn-login-header" id="loginBtnHeader" onclick="document.getElementById('loginModal').classList.remove('hidden')">Log In</button>
+                <button class="btn-login-header hidden" id="logoutBtnHeader" onclick="logout()" style="background: var(--danger);">Log Out</button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div id="home-view">
+            <section class="glass-panel" id="step1-section">
+                <div class="section-header">
+                    <h2 class="section-title"><span class="step">1</span>Select Building</h2>
+                </div>
+                <div class="grid-selector" id="building-container"></div>
+            </section>
+
+            <section class="glass-panel hidden" id="step2-section">
+                <div class="section-header">
+                    <h2 class="section-title"><span class="step">2</span>Choose Floor</h2>
+                </div>
+                <div class="pill-group" id="floor-container"></div>
+            </section>
+
+            <section class="glass-panel hidden" id="step3-section">
+                <div class="section-header">
+                    <h2 class="section-title"><span class="step">3</span>Available Spaces</h2>
+                    <span class="result-count" id="result-count">0 found</span>
+                </div>
+                
+                <div class="filter-bar">
+                    <div class="input-group">
+                        <label>Date</label>
+                        <input type="text" id="dateInput" placeholder="Select Date...">
+                    </div>
+                    <div class="input-group">
+                        <label>Start Time</label>
+                        <input type="time" id="timeInput">
+                    </div>
+                    <div class="input-group">
+                        <label>Duration (Max 3 hrs)</label>
+                        <select id="durationInput">
+                            <option value="1">1 Hour</option>
+                            <option value="2">2 Hours</option>
+                            <option value="3">3 Hours</option>
+                        </select>
+                    </div>
+                    <div class="input-group" id="typeFilterContainer">
+                        <label>Facility Type</label>
+                        <select id="typeFilter" onchange="renderRooms()">
+                            <option value="All">All Types</option>
+                            <option value="Classroom">Classroom</option>
+                            <option value="Computer Lab">Computer Lab</option>
+                            <option value="Finance Lab">Finance Lab</option>
+                            <option value="Consultation room">Consultation Room</option>
+                            <option value="Lecture Theatre">Lecture Theatre</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="room-grid" id="room-grid"></div>
+                <div id="library-map-section" class="hidden">
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-box" style="background: var(--primary);"></div>Available</div>
+                        <div class="legend-item"><div class="legend-box" style="background: var(--danger);"></div>Taken</div>
+                        <div class="legend-item"><div class="legend-box" style="background: var(--text-tertiary);"></div>Public Area (No Booking)</div>
+                    </div>
+                    <div id="library-map-container" style="overflow-x: auto; padding-bottom: 1rem;"></div>
+                </div>
+            </section>
+        </div>
+
+        <div id="bookings-view" class="hidden">
+            <section class="glass-panel">
+                <div class="section-header">
+                    <h2 class="section-title">My Booking History</h2>
+                </div>
+                <p class="text-muted" style="margin-bottom: 1.5rem;">Manage your upcoming study sessions.</p>
+                <div id="booking-list"></div>
+            </section>
+        </div>
+    </main>
+
+    <div class="modal-overlay hidden" id="loginModal">
+        <div class="glass-panel modal-container">
+            <h3 class="modal-title">Authentication Required</h3>
+            <div class="form-grid">
+                <label class="form-label">Login as:</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="userType" value="staff"> Staff
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="userType" value="existing" checked> Existing Student
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="userType" value="prearrival"> Pre Arrival (New) Student
+                    </label>
+                </div>
+                
+                <label class="form-label">Student ID:</label>
+                <input type="text" id="studentId" class="glass-input" placeholder="8 digits (e.g., 12345678)" maxlength="8">
+                
+                <label class="form-label">Password:</label>
+                <input type="password" id="password" class="glass-input" placeholder="Date of Birth (ddmmyyyy)" maxlength="8">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-primary" onclick="processLogin()">Confirm Booking</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="customAlertModal" style="z-index: 9999;">
+        <div class="glass-panel modal-container" style="max-width: 400px; text-align: center;">
+            <h3 class="modal-title" style="margin-bottom: 1rem;">Notification</h3>
+            <p id="alertMessage" style="margin-bottom: 2rem; color: var(--text-secondary); white-space: pre-wrap;"></p>
+            <div class="modal-footer" style="justify-content: center;">
+                <button class="btn-primary" id="alertOkBtn" style="width: 100%;">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="customConfirmModal" style="z-index: 9999;">
+        <div class="glass-panel modal-container" style="max-width: 400px; text-align: center;">
+            <h3 class="modal-title" style="margin-bottom: 1rem;">Confirm Action</h3>
+            <p id="confirmMessage" style="margin-bottom: 2rem; color: var(--text-secondary); white-space: pre-wrap;"></p>
+            <div class="modal-footer" style="justify-content: center; gap: 1rem; border-top: none;">
+                <button class="btn-cancel" id="confirmCancelBtn" style="width: 50%;">Cancel</button>
+                <button class="btn-primary" id="confirmOkBtn" style="width: 50%; background: var(--danger);">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
