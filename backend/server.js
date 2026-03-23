@@ -273,9 +273,10 @@ if (process.env.NODE_ENV !== 'production') {
       const passwords = JSON.parse(
         fs.readFileSync(path.join(__dirname, 'database/demo_passwords.json'), 'utf-8')
       );
-      // Return only the first 20 entries to limit exposure even in dev
+      // Return passwords for the specific accounts shown in demo-accounts.js dropdown
+      const DEMO_IDS = ['jc100001','jc100002','jc100050','st0001','st0010','ad0001','ad0005'];
       const subset = {};
-      Object.keys(passwords).slice(0, 20).forEach(k => { subset[k] = passwords[k]; });
+      DEMO_IDS.forEach(k => { if (passwords[k]) subset[k] = passwords[k]; });
       res.json(subset);
     } catch {
       res.status(404).json({ error: 'Demo passwords not available' });
