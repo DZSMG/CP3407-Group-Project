@@ -52,7 +52,7 @@ const insert = db.prepare(`
 const insertMany = db.transaction((rows) => {
   let count = 0;
   for (const line of rows) {
-    // CSV columns: student_id, full_name, email, password_hash, role, status, program, year_of_study
+    // CSV columns: student_id, full_name, email, password (plaintext), role, status, program, year_of_study
     // Programs can contain commas, so split on first 7 commas only
     const parts = line.split(',');
     const studentId    = parts[0].trim();

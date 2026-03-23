@@ -8,7 +8,6 @@ Requires: pip install bcrypt
 """
 
 import sqlite3
-import bcrypt
 import random
 import string
 import csv
@@ -97,32 +96,29 @@ def main():
         name    = f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
         email   = f"{sid}@my.jcu.edu.sg"
         pw      = rand_password()
-        pw_hash = bcrypt.hashpw(pw.encode(), bcrypt.gensalt(10)).decode()
         program = random.choice(PROGRAMS)
         year    = random.randint(1, 2) if program in MASTER_DIPLOMA else random.randint(1, 4)
         status  = "pre_arrival" if i <= 100 else "active"
         plaintext_passwords[sid] = pw
-        users_to_insert.append((sid, name, email, pw_hash, "student", status, program, year))
+        users_to_insert.append((sid, name, email, pw, "student", status, program, year))
 
     # ── 80 staff ───────────────────────────────────────────────────────────
     for i in range(1, 81):
-        sid     = f"st{i:04d}"
-        name    = f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
-        email   = f"{sid}@jcu.edu.sg"
-        pw      = rand_password()
-        pw_hash = bcrypt.hashpw(pw.encode(), bcrypt.gensalt(10)).decode()
+        sid  = f"st{i:04d}"
+        name = f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
+        email = f"{sid}@jcu.edu.sg"
+        pw   = rand_password()
         plaintext_passwords[sid] = pw
-        users_to_insert.append((sid, name, email, pw_hash, "staff", "active", None, None))
+        users_to_insert.append((sid, name, email, pw, "staff", "active", None, None))
 
     # ── 20 admins ──────────────────────────────────────────────────────────
     for i in range(1, 21):
-        sid     = f"ad{i:04d}"
-        name    = f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
-        email   = f"{sid}@jcu.edu.sg"
-        pw      = rand_password()
-        pw_hash = bcrypt.hashpw(pw.encode(), bcrypt.gensalt(10)).decode()
+        sid  = f"ad{i:04d}"
+        name = f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
+        email = f"{sid}@jcu.edu.sg"
+        pw   = rand_password()
         plaintext_passwords[sid] = pw
-        users_to_insert.append((sid, name, email, pw_hash, "admin", "active", None, None))
+        users_to_insert.append((sid, name, email, pw, "admin", "active", None, None))
 
     # Batch insert
     def insert_batch(rows):
@@ -141,16 +137,16 @@ def main():
     print(f"Generated 2500 demo users: "
           f"{counts['student']} students, {counts['staff']} staff, {counts['admin']} admins")
 
-    # ── Export CSV (password_hash at col 3 so seed-demo-users.js works) ────
+    # ── Export CSV (plaintext password at col 3) ──────────────────────────
     with open(CSV_PATH, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["student_id", "full_name", "email", "password_hash",
+        writer.writerow(["student_id", "full_name", "email", "password",
                          "role", "status", "program", "year_of_study"])
         for row in users_to_insert:
             writer.writerow(row)
     print(f"Exported: demo_users_credentials.csv ({len(users_to_insert)} rows)")
 
-    # ── Export JSON (plaintext passwords for demo login reference) ─────────
+    # ── Export JSON (plaintext passwords for demo-accounts.js) ───────────
     with open(JSON_PATH, "w", encoding="utf-8") as f:
         json.dump(plaintext_passwords, f, indent=2)
     print(f"Exported: demo_passwords.json ({len(plaintext_passwords)} entries)")

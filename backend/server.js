@@ -58,9 +58,13 @@ app.post('/api/auth/login', (req, res) => {
   if (!studentId || !password) return res.status(400).json({ error: 'studentId and password required' });
 
   const user = db.prepare('SELECT * FROM users WHERE student_id = ?').get(studentId);
-  if (!user || !bcryptjs.compareSync(password, user.password_hash)) {
-    return res.status(401).json({ error: 'Invalid student ID or password' });
-  }
+  if (!user) return res.status(401).json({ error: 'Invalid student ID or password' });
+
+  // Support both plaintext (demo DB) and bcrypt-hashed passwords
+  const passwordMatch = user.password_hash.startsWith('$2')
+    ? bcryptjs.compareSync(password, user.password_hash)
+    : password === user.password_hash;
+  if (!passwordMatch) return res.status(401).json({ error: 'Invalid student ID or password' });
 
   const token = jwt.sign(
     { userId: user.id, studentId: user.student_id, role: user.role },
