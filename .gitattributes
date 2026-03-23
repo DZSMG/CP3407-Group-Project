@@ -1,0 +1,12 @@
+# Binary files -- prevent Git from trying to text-merge them.
+# On conflict Git will mark them as binary conflicts instead of
+# corrupting the file with <<< === >>> markers.
+*.db        binary
+*.db-shm    binary
+*.db-wal    binary
+*.xlsx      binary
+*.pyc       binary
+
+# CSV and JSON data exports -- treat as binary so diffs stay clean
+backend/database/demo_users_credentials.csv  -diff
+backend/database/demo_passwords.json         -diff
